@@ -19,13 +19,13 @@ object Config {
     val versionFull = "v$versionName-b$versionCode"
 
     @JvmStatic
-    val appName = "AndroidAppTemplate"
+    val appName = "ClockFeeder"
 
     @JvmStatic
-    val applicationId = "com.tailoredapps.androidapptemplate"
+    val applicationId = "com.codingblocks.clock"
 
     @JvmStatic
-    val namespace = "com.tailoredapps.androidapptemplate"
+    val namespace = "com.codingblocks.clock"
 
     @JvmStatic
     val archiveName = "$appName-$versionFull"

@@ -6,7 +6,7 @@
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
 # Keep model classes
--keep class com.tailoredapps.androidapptemplate.core.model.** { *; }
+-keep class com.codingblocks.clock.core.model.** { *; }
 
 # LeakCanary
 -dontwarn com.squareup.haha.guava.**
