@@ -1,17 +1,5 @@
-![Android App Template Logo](https://user-images.githubusercontent.com/2580292/59103107-390a7b80-892e-11e9-9466-774d413697ee.jpg)
-
-![Android](https://img.shields.io/badge/Platform-Android-green.svg)
-![Kotlin](https://img.shields.io/badge/Language-Kotlin-orange.svg) 
-![Reactive](https://img.shields.io/badge/Reactive-coroutines-blue.svg)
-
-This is an Android app template which can be used for new projects. A small example app is available [here](https://github.com/tailoredmedia/AndroidAppTemplateExample).
-
-Check out [AndroidAppUtil](https://github.com/tailoredmedia/AndroidAppUtil) for several utility classes.
-
-
 ### Table of Contents
 * [Technologies](#technologies)
-* [Setup](#setup)
 * [App structure](#app_structure)
 * [Predefined Modules](#predefined_structure)
 * [Module/Package structure](#module_structure)
@@ -20,7 +8,6 @@ Check out [AndroidAppUtil](https://github.com/tailoredmedia/AndroidAppUtil) for 
     * [Dependencies](#dependencies)
         * [How to add a dependency](#adddependencies)
     * [ktlint](#ktlint)
-* [Recommended Reading](#recommended_reading)
 * [License](#license)
 
 
@@ -30,16 +17,6 @@ Check out [AndroidAppUtil](https://github.com/tailoredmedia/AndroidAppUtil) for 
 * Koin for dependency injection
 * Retrofit/OkHttp/Gson for networking
 * Control (MVI) as architectural pattern
-
-
-## Setup <a name="setup"></a>
-1. Create your **git** repository and check it out on your machine.
-2. Add `git@github.com:tailoredmedia/AndroidAppTemplateCompose.git` as remote and merge the latest commit into your repository (you most likely need to `--allow-unrelated-histories`).
-3. Run the provided `setup.sh` script to rename files and properties according to project. Afterwards delete `setup.sh` from your repository.
-`setup.sh` script needs bash version 4+. [MacOS has bash version 3.2 pre-installed and needs to be upgraded](https://itnext.io/upgrading-bash-on-macos-7138bd1066ba)!
-4. Change `README.md` content to something appropriate.
-5. Commit and Push to your **git** repository.
-
 
 ## App structure <a name="app_structure"></a>
 Features should be contained in a separate module. The `core` module should contain shared code, for example *api* or *database* classes that are needed in multiple feature modules. The `app` module contains Android app related (*ui*) code. Depending on the project size 
@@ -110,17 +87,6 @@ Use `./gradlew lintKotlin` to lint your code and `./gradlew formatKotlin` to for
 Enable/disable rules in `.editorconfig`
 
 > ATTENTION: When you modify `.editorconfig` make sure to restart the gradle daemon (`./gradlew --stop`) otherwise the changes made to `.editorconfig` might not be applied. (More infos [here](https://github.com/jeremymailen/kotlinter-gradle/issues/336#issuecomment-1676235455))
-
-## Recommended Reading <a name="recommended_reading"></a>
-* [Kotlin](https://kotlinlang.org/docs/reference/)
-* [Kotlin Coroutines](https://kotlinlang.org/docs/reference/coroutines/basics.html)
-* [Kotlin Flow](https://kotlinlang.org/docs/reference/coroutines/flow.html)
-* [Jetpack Compose](https://developer.android.com/jetpack/compose)
-* [Compose Metrics](https://chrisbanes.me/posts/composable-metrics)
-* [control](https://github.com/floschu/control/)
-* [Koin](https://insert-koin.io/)
-* [Retrofit](http://www.vogella.com/tutorials/Retrofit/article.html)
-
 
 ## License <a name="license"></a>
 ```
