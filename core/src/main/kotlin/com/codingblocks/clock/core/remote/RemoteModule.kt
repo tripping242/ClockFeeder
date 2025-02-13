@@ -17,8 +17,8 @@
 
 package com.codingblocks.clock.core.remote
 
-import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.codingblocks.clock.core.model.AppBuildInfo
+import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient

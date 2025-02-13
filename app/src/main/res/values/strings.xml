@@ -2,4 +2,7 @@
 <resources>
     <string name="screen_overview">Overview</string>
     <string name="screen_detail">Detail</string>
+    <string name="screen_watchlists">Watchlists</string>
+    <string name="screen_feeds">Feeds</string>
+    <string name="screen_settings">Settings</string>
 </resources>

@@ -1,14 +1,14 @@
-package com.codingblocks.clock.ui.main
+package com.codingblocks.clock.ui.watchlists
 
 import androidx.compose.material.Surface
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 
 @Composable
-fun MainScreen(initNavigation: @Composable (navHostController: NavHostController) -> Unit) {
+fun WatchlistsScreen() {
     val mainNavHostController = rememberNavController()
     Surface {
-        initNavigation(mainNavHostController)
+        Text("Hello watchlists")
     }
 }

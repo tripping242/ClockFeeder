@@ -7,9 +7,12 @@ import androidx.navigation.navigation
 import com.codingblocks.clock.navigation.destinations.ROUTE_MAIN
 import com.codingblocks.clock.navigation.destinations.ROUTE_OVERVIEW
 import com.codingblocks.clock.navigation.destinations.detailScreen
+import com.codingblocks.clock.navigation.destinations.feedsScreen
 import com.codingblocks.clock.navigation.destinations.mainScreen
 import com.codingblocks.clock.navigation.destinations.navigateToDetail
 import com.codingblocks.clock.navigation.destinations.overviewScreen
+import com.codingblocks.clock.navigation.destinations.settingsScreen
+import com.codingblocks.clock.navigation.destinations.watchListsScreen
 
 enum class NavHosts(val route: String) {
     App("nav_host_app"),
@@ -37,6 +40,14 @@ fun NavHostController.AppNavHost() {
             mainScreen { navHostController ->
                 navHostController.MainNavHost()
             }
+
+            detailScreen()
+
+            feedsScreen()
+
+            watchListsScreen()
+
+            settingsScreen()
         }
     }
 }
@@ -57,6 +68,12 @@ fun NavHostController.MainNavHost() {
             )
 
             detailScreen()
+
+            feedsScreen()
+
+            watchListsScreen()
+
+            settingsScreen()
         }
     }
 }

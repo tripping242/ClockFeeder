@@ -23,14 +23,24 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.consumedWindowInsets
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.view.WindowCompat
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.codingblocks.clock.base.ui.scaffold.AppScaffold
 import com.codingblocks.clock.base.ui.theme.AppTheme
 import com.codingblocks.clock.navigation.AppNavHost
 
@@ -66,11 +76,37 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MainView() {
+    val scaffoldState = rememberScaffoldState()
+    val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+    val currentDestinationRoute = currentDestination?.route
+    val isBottomNavigationVisible = true
+    // BottomNav.entries.any { it.screen.route == currentDestinationRoute }
+
     AppTheme {
-        val navController = rememberNavController()
-        navController.AppNavHost()
+        AppScaffold(
+            scaffoldState = scaffoldState,
+            bottomBar = {
+                if (isBottomNavigationVisible) {
+                    MainBottomNavigation(
+                        navController = navController,
+                    )
+                }
+            },
+        ) { contentPadding ->
+            Box(
+                modifier = Modifier
+                    .consumedWindowInsets(contentPadding)
+                    .padding(contentPadding)
+                    .imePadding(),
+            ) {
+                navController.AppNavHost()
+            }
+        }
     }
 }
 
