@@ -17,4 +17,14 @@
 
 package com.codingblocks.clock.core.remote
 
-interface TapToolsApi
+import com.codingblocks.clock.core.model.taptools.PositionsResponse
+import retrofit2.Response
+import retrofit2.http.GET
+import retrofit2.http.Query
+
+interface TapToolsApi {
+    @GET("wallet/portfolio/positions")
+    suspend fun getPositionsForAddress(
+        @Query("address") address: String
+    ): Response<PositionsResponse>
+}

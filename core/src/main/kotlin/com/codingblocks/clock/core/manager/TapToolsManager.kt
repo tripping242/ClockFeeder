@@ -3,16 +3,25 @@ package com.codingblocks.clock.core.manager
 import android.content.Context
 import com.codingblocks.clock.core.database.TapToolsDatabase
 import com.codingblocks.clock.core.interceptor.TapToolsKeyInterceptor
+import com.codingblocks.clock.core.model.taptools.PositionsResponse
 import com.codingblocks.clock.core.model.taptools.TapToolsConfig
 import com.codingblocks.clock.core.remote.TapToolsApi
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.ResponseBody
+import retrofit2.HttpException
+import retrofit2.Response
 import retrofit2.Retrofit
+import timber.log.Timber
+import kotlin.coroutines.cancellation.CancellationException
 
 interface TapToolsManager {
     fun updateApiKey(key: String?)
+    suspend fun getPositionsForAddress(address: String) : Result<PositionsResponse>
 }
 
 class TapToolsManagerImpl private constructor(
@@ -38,6 +47,8 @@ class TapToolsManagerImpl private constructor(
     private val json by lazy {
         Json {
             ignoreUnknownKeys = true
+            explicitNulls = false
+            allowStructuredMapKeys = true
         }
     }
 
@@ -51,6 +62,9 @@ class TapToolsManagerImpl private constructor(
         api = provideApi(key)
     }
 
+    override suspend fun getPositionsForAddress(address: String): Result<PositionsResponse> = safeCall(api) {
+        getPositionsForAddress(address)
+    }
 
     private fun provideApi(key: String?): TapToolsApi? {
         if (key == null) {
@@ -66,4 +80,42 @@ class TapToolsManagerImpl private constructor(
             )
             .build().create(TapToolsApi::class.java)
     }
+    private suspend fun <T> safeCall(
+        api: TapToolsApi?,
+        action: suspend TapToolsApi.() -> Response<T>
+    ): Result<T> = withContext(Dispatchers.IO) {
+        try {
+            if (api != null) {
+                val result = action(api)
+                val body = result.body()
+                val errorBody = result.errorBody()
+
+                if (body != null) {
+                    Result.success(body)
+                } else if (errorBody != null) {
+                    Result.failure(TapToolsApiError.ErrorBody(errorBody))
+                } else {
+                    Result.failure(TapToolsApiError.BodyAndErrorNull)
+                }
+            } else {
+                Result.failure(TapToolsApiError.NoTokenFound)
+            }
+        } catch (e: HttpException) {
+            Result.failure(TapToolsApiError.HttpException(e.code(), e.message()))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(TapToolsApiError.UnkownError(e))
+        }
+    }
+        .onFailure { Timber.e(it) }
+}
+
+sealed class TapToolsApiError(msg: String? = null, throwable: Throwable? = null) : Throwable(message = msg, cause = throwable) {
+    data object NoTokenFound : TapToolsApiError()
+    data object NoUserId : TapToolsApiError()
+    data object BodyAndErrorNull : TapToolsApiError()
+    data class ErrorBody(val errorBody: ResponseBody) : TapToolsApiError(msg = errorBody.string())
+    data class HttpException(val code: Int, override val message: String) : TapToolsApiError(msg = "CODE: ${code}\nMESSAGE: $message")
+    data class UnkownError(val throwable: Throwable) : TapToolsApiError(throwable = throwable)
 }

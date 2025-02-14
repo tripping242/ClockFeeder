@@ -20,6 +20,7 @@ package com.codingblocks.clock
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import com.codingblocks.clock.core.model.AppBuildInfo
+import com.codingblocks.clock.ui.feeds.feedsModule
 import com.codingblocks.clock.ui.overview.overviewModule
 import com.codingblocks.clock.ui.watchlists.watchListModule
 import org.koin.android.ext.koin.androidContext
@@ -38,4 +39,4 @@ private fun provideAppBuildInfo(context: Context): AppBuildInfo = AppBuildInfo(
     tapToolsBaseUrl = BuildConfig.TAPTOOLS_BASE_URL,
 )
 
-internal val appModules = listOf(appModule, overviewModule, watchListModule)
+internal val appModules = listOf(appModule, overviewModule, watchListModule, feedsModule)

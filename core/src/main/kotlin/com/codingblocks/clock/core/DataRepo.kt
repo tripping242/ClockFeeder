@@ -25,12 +25,13 @@ import com.codingblocks.clock.core.manager.TapToolsManager
 import com.codingblocks.clock.core.manager.TapToolsManagerImpl
 import com.codingblocks.clock.core.model.AppBuildInfo
 import com.codingblocks.clock.core.model.clock.StatusResponse
+import com.codingblocks.clock.core.model.taptools.PositionsResponse
 import com.codingblocks.clock.core.model.taptools.TapToolsConfig
 import okhttp3.OkHttpClient
-import timber.log.Timber
 
 interface DataRepo {
     suspend fun getClockStatus() : Result<StatusResponse>
+    suspend fun getPositionsForAddress(address: String) : Result<PositionsResponse>
 }
 
 class CoreDataRepo(
@@ -64,5 +65,8 @@ class CoreDataRepo(
 
     override suspend fun getClockStatus(): Result<StatusResponse> =
         clockManager.getStatus()
+
+    override suspend fun getPositionsForAddress(address: String): Result<PositionsResponse> =
+        tapToolsManager.getPositionsForAddress(address)
 
 }
