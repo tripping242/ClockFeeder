@@ -14,15 +14,15 @@ androidx-test-runner = "1.5.2"
 benmanes-versions = "0.50.0"
 coil = "2.5.0"
 collections-immutable = "0.3.6"
-compose-compiler = "1.5.6"
+compose-compiler = "1.5.15"
 control-core = "1.2.0"
 google-material = "1.11.0"
 junit = "4.13.2"
 koin = "3.5.0"
-kotlin = "1.9.21"
+kotlin = "1.9.25"
 kotlinter = "4.1.0"
 kotlinx-coroutines = "1.7.3"
-ksp = "1.9.21-1.0.15"
+ksp = "1.9.25-1.0.20"
 leakcanary = "2.12"
 littlerobots-version-catalog-updates = "0.8.1"
 mock = "1.13.8"
@@ -34,6 +34,7 @@ slack-linter = "1.2.0"
 timber = "5.0.1"
 okhttp-digest = "3.1.1"
 gson = "2.12.1"
+room = "2.6.1"
 
 
 [libraries]
@@ -86,6 +87,10 @@ square-retrofit-core = { module = "com.squareup.retrofit2:retrofit", version.ref
 square-retrofit-converter-scalars = { module = "com.squareup.retrofit2:converter-scalars", version.ref = "retrofit" }
 io-github-rburgst = { module = "io.github.rburgst:okhttp-digest", version.ref = "okhttp-digest" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+room-runtime = { module = "androidx.room:room-runtime" , version.ref = "room" }
+room-ktx = { module = "androidx.room:room-ktx" , version.ref = "room" }
+room-compiler = { module = "androidx.room:room-compiler" , version.ref = "room" }
+
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "android-gradle-plugin" }

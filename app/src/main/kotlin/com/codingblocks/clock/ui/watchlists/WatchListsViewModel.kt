@@ -6,7 +6,9 @@ import at.florianschuster.control.createController
 import com.codingblocks.clock.base.control.ControllerViewModel
 import com.codingblocks.clock.core.DataRepo
 import com.codingblocks.clock.core.model.clock.StatusResponse
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 class WatchListViewModel(
@@ -33,13 +35,21 @@ class WatchListViewModel(
             mutator = { action ->
                 when (action) {
                     Action.GetClockStatus -> flow {
-                        try {
-                            emit(Mutation.ErrorChanged(null))
-                            dataRepo.getClockStatus()
-                                .onSuccess { emit(Mutation.StatusChanged(it))  }
-                                .onFailure { emit(Mutation.ErrorChanged("could not retreive Clock Status:\n$it")) }
-                        } catch (e: Exception) {
-                            Timber.d("could not retreive Clock Status $e")
+                        viewModelScope.launch(Dispatchers.IO) {
+                            try {
+                                emit(Mutation.ErrorChanged(null))
+                                dataRepo.getClockStatus()
+                                    .onSuccess { emit(Mutation.StatusChanged(it)) }.onFailure {
+                                        emit(
+                                            Mutation.ErrorChanged(
+                                                it.message
+                                                    ?: "could not retreive Clock Status:\n$it"
+                                            )
+                                        )
+                                    }
+                            } catch (e: Exception) {
+                                Timber.d("could not retreive Clock Status $e")
+                            }
                         }
                     }
                 }

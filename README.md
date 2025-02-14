@@ -17,6 +17,7 @@
 * Koin for dependency injection
 * Retrofit/OkHttp/Gson for networking
 * Control (MVI) as architectural pattern
+* Room for local storage
 
 ## App structure <a name="app_structure"></a>
 Features should be contained in a separate module. The `core` module should contain shared code, for example *api* or *database* classes that are needed in multiple feature modules. The `app` module contains Android app related (*ui*) code. Depending on the project size 

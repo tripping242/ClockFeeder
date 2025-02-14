@@ -20,6 +20,8 @@ import retrofit2.HttpException
 import retrofit2.Response
 import retrofit2.Retrofit
 import timber.log.Timber
+import java.net.ConnectException
+import java.net.SocketTimeoutException
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -123,6 +125,10 @@ class ClockManagerImpl private constructor(
             Result.failure(ClockApiError.HttpException(e.code(), e.message()))
         } catch (e: CancellationException) {
             throw e
+        } catch (e: SocketTimeoutException) {
+            Result.failure(ClockApiError.ClockNotOnline)
+        } catch (e: ConnectException) {
+            Result.failure(ClockApiError.ClockNotOnline)
         } catch (e: Exception) {
             Result.failure(ClockApiError.UnkownError(e))
         }
@@ -134,6 +140,7 @@ sealed class ClockApiError(msg: String? = null, throwable: Throwable? = null) : 
     data object NoTokenFound : ClockApiError()
     data object NoUserId : ClockApiError()
     data object BodyAndErrorNull : ClockApiError()
+    data object ClockNotOnline : ClockApiError(msg = "Your BlockClock seems to be unreachable")
     data class ErrorBody(val errorBody: ResponseBody) : ClockApiError(msg = errorBody.string())
     data class HttpException(val code: Int, override val message: String) : ClockApiError(msg = "CODE: ${code}\nMESSAGE: $message")
     data class UnkownError(val throwable: Throwable) : ClockApiError(throwable = throwable)

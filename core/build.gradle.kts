@@ -41,6 +41,11 @@ dependencies {
     api(libs.koin.core)
     api(libs.kotlinx.collections.immutable)
     api(libs.kotlinx.coroutines.core)
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler) {
+        exclude(group = "com.google.auto", module = "auto-common")
+    }
 
     implementation(libs.jakewharton.retrofit2.kotlinx.serialization.converter)
     implementation(libs.kotlinx.serialization.json)

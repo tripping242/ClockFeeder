@@ -18,13 +18,13 @@ data class PositionsResponse (
 @Serializable
 data class PositionsFt (
     @SerialName("24h")
-    val the24H: Double,
+    val change24H: Double,
 
     @SerialName("30d")
-    val the30D: Double,
+    val change30D: Double,
 
     @SerialName("7d")
-    val the7D: Double,
+    val change7D: Double,
 
     val adaValue: Double,
     val balance: Double,
@@ -54,13 +54,13 @@ data class PositionsLp (
 @Serializable
 data class PositionsNft (
     @SerialName("24h")
-    val the24H: Double,
+    val change24H: Double,
 
     @SerialName("30d")
-    val the30D: Double,
+    val change30D: Double,
 
     @SerialName("7d")
-    val the7D: Double,
+    val change7D: Double,
 
     val adaValue: Double,
     val balance: Double,

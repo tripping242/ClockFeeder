@@ -1,5 +1,6 @@
 package com.codingblocks.clock.base.ui.utils
 
+import android.annotation.SuppressLint
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonParser
 import com.google.gson.JsonSyntaxException
@@ -25,3 +26,15 @@ fun prettyPrintJson(
         "Invalid JSON: ${e.message}"
     }
 }
+
+@SuppressLint("DefaultLocale")
+fun Double.formatMax8decimals(): String {
+    return when {
+        this >= 100 -> String.format("%.0f", this).removeSuffix(".0")
+        this >= 1 -> String.format("%.4f", this).removeSuffix("0").removeSuffix("0").removeSuffix("0").removeSuffix("0").removeSuffix(".")
+        this >= 0.01 -> String.format("%.6f", this).removeSuffix("0").removeSuffix("0").removeSuffix(".")
+        else -> String.format("%.8f", this).removeSuffix("0").removeSuffix("0").removeSuffix(".")
+    }
+}
+
+fun Double.formatToNoDecimals(): String = this.toLong().toString()

@@ -1,7 +1,7 @@
 object Config {
 
     @JvmStatic
-    val minSdk = 23
+    val minSdk = 26
 
     @JvmStatic
     val compileSdk = 34

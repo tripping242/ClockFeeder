@@ -36,7 +36,9 @@ class FeedsViewModel(
                         try {
                             emit(Mutation.ErrorChanged(null))
                             dataRepo.getPositionsForAddress("stake1uy368slqls4u66g0502krmyasfdke3elfh0z6qgczmylx7ce6frnl")
-                                .onSuccess { emit(Mutation.PositionsChanged(it))  }
+                                .onSuccess {
+                                    dataRepo.updateOrInsertPositions(it)
+                                    emit(Mutation.PositionsChanged(it))  }
                                 .onFailure { emit(Mutation.ErrorChanged("could not retreive Positions:\n$it")) }
                         } catch (e: Exception) {
                             Timber.d("could not retreive Positions $e")

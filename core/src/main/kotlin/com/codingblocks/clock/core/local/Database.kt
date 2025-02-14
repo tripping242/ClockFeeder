@@ -17,6 +17,23 @@
 
 package com.codingblocks.clock.core.local
 
-interface Database
+import androidx.room.Database
+import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
+import com.codingblocks.clock.core.local.dao.PositionsDao
+import com.codingblocks.clock.core.local.data.PositionFT
+import com.codingblocks.clock.core.local.data.PositionNFT
 
-class DatabaseImpl : Database
+
+@Database(entities = [PositionFT::class, PositionNFT::class], version = 1)
+@TypeConverters(ZonedDateTimeConverter::class)
+abstract class AppDatabase : RoomDatabase() {
+    companion object {
+        const val NAME = "TapTools_DB"
+    }
+
+    abstract fun getPositionsDao() : PositionsDao
+}
+
+
+

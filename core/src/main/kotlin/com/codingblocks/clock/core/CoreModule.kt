@@ -17,7 +17,8 @@
 
 package com.codingblocks.clock.core
 
-import com.codingblocks.clock.core.local.localModule
+import androidx.room.Room
+import com.codingblocks.clock.core.local.AppDatabase
 import com.codingblocks.clock.core.model.AppBuildInfo
 import com.codingblocks.clock.core.remote.remoteModule
 import okhttp3.OkHttpClient
@@ -30,16 +31,28 @@ internal val coreModule = module {
 
     single { provideOkHttpClient(loggingInterceptor = get(), appBuildInfo = get()) }
 
+    single {
+        Room.databaseBuilder(
+            context = get(),
+            AppDatabase::class.java,
+            AppDatabase.NAME,
+            // temp test solution, replace with flow!!
+        ).allowMainThreadQueries().build()
+    }
+
+    single { get<AppDatabase>().getPositionsDao() }
+
     single<DataRepo> {
         CoreDataRepo(
             context = get(),
             database = get(),
             okHttpClient = get(),
             appBuildInfo = get(),
-        ) }
+        )
+    }
 }
 
-val coreModules = listOf(coreModule, localModule, remoteModule)
+val coreModules = listOf(coreModule, remoteModule)
 
 private fun provideOkHttpClient(
     loggingInterceptor: HttpLoggingInterceptor,
