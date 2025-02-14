@@ -18,19 +18,15 @@
 package com.codingblocks.clock.core.remote
 
 import com.codingblocks.clock.core.model.AppBuildInfo
-import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.koin.dsl.module
-import retrofit2.Retrofit
 
 internal val remoteModule = module {
     factory { HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY } }
     single { Json { ignoreUnknownKeys = true } }
     single { provideOkHttpClient(loggingInterceptor = get(), appBuildInfo = get()) }
-    single { provideApi<MyApi>(okHttpClient = get(), json = get(), appBuildInfo = get()) }
 }
 
 private fun provideOkHttpClient(
@@ -39,13 +35,3 @@ private fun provideOkHttpClient(
 ): OkHttpClient = OkHttpClient().newBuilder().apply {
     if (appBuildInfo.debug) addInterceptor(loggingInterceptor)
 }.build()
-
-private inline fun <reified T> provideApi(
-    okHttpClient: OkHttpClient,
-    json: Json,
-    appBuildInfo: AppBuildInfo,
-): T = Retrofit.Builder().apply {
-    baseUrl(appBuildInfo.baseUrl)
-    client(okHttpClient)
-    addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-}.build().create(T::class.java)

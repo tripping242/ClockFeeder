@@ -18,11 +18,35 @@
 package com.codingblocks.clock.core
 
 import com.codingblocks.clock.core.local.localModule
+import com.codingblocks.clock.core.model.AppBuildInfo
 import com.codingblocks.clock.core.remote.remoteModule
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import org.koin.dsl.module
 
 internal val coreModule = module {
-    single<DataRepo> { CoreDataRepo(api = get(), database = get()) }
+
+    factory { HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY } }
+
+    single { provideOkHttpClient(loggingInterceptor = get(), appBuildInfo = get()) }
+
+    single<DataRepo> {
+        CoreDataRepo(
+            context = get(),
+            database = get(),
+            okHttpClient = get(),
+            appBuildInfo = get(),
+        ) }
 }
 
 val coreModules = listOf(coreModule, localModule, remoteModule)
+
+private fun provideOkHttpClient(
+    loggingInterceptor: HttpLoggingInterceptor,
+    appBuildInfo: AppBuildInfo,
+): OkHttpClient = OkHttpClient()
+    .newBuilder()
+    .apply {
+        if (appBuildInfo.debug) addInterceptor(loggingInterceptor)
+    }
+    .build()

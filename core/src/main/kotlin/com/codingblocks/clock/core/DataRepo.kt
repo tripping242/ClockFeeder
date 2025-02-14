@@ -17,9 +17,52 @@
 
 package com.codingblocks.clock.core
 
+import android.content.Context
 import com.codingblocks.clock.core.local.Database
-import com.codingblocks.clock.core.remote.MyApi
+import com.codingblocks.clock.core.manager.ClockManager
+import com.codingblocks.clock.core.manager.ClockManagerImpl
+import com.codingblocks.clock.core.manager.TapToolsManager
+import com.codingblocks.clock.core.manager.TapToolsManagerImpl
+import com.codingblocks.clock.core.model.AppBuildInfo
+import com.codingblocks.clock.core.model.clock.StatusResponse
+import com.codingblocks.clock.core.model.taptools.TapToolsConfig
+import okhttp3.OkHttpClient
+import timber.log.Timber
 
-interface DataRepo
+interface DataRepo {
+    suspend fun getClockStatus() : Result<StatusResponse>
+}
 
-class CoreDataRepo(private val api: MyApi, private val database: Database) : DataRepo
+class CoreDataRepo(
+    private val context: Context,
+    private val database: Database,
+    private val okHttpClient: OkHttpClient,
+    private val appBuildInfo: AppBuildInfo,
+) : DataRepo {
+    private val tapToolsManager: TapToolsManager = provideTapToolsManager()
+    private val clockManager: ClockManager = provideClockManager()
+
+    private fun provideTapToolsManager() : TapToolsManager {
+        return TapToolsManagerImpl.Builder(
+            context,
+            TapToolsConfig(appBuildInfo.tapToolsBaseUrl)
+        )
+            .setOkHttpClient(okHttpClient)
+            .build()
+    }
+
+    private fun provideClockManager() : ClockManager {
+        return ClockManagerImpl.Builder(
+            context,
+        )
+            .setOkHttpClient(
+                okHttpClient.newBuilder()
+                    .build()
+            )
+            .build()
+    }
+
+    override suspend fun getClockStatus(): Result<StatusResponse> =
+        clockManager.getStatus()
+
+}

@@ -76,6 +76,7 @@ dependencies {
     api(libs.google.material.core)
     api(libs.koin.android)
     api(libs.koin.androidx.compose)
+    api(libs.gson)
     debugApi(libs.square.leakcanary.android)
     releaseApi(libs.square.leakcanary.objectwatcher)
     lintChecks(libs.slack.lint.compose)

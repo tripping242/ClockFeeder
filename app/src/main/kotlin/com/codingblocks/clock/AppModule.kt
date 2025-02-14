@@ -21,6 +21,7 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import com.codingblocks.clock.core.model.AppBuildInfo
 import com.codingblocks.clock.ui.overview.overviewModule
+import com.codingblocks.clock.ui.watchlists.watchListModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
@@ -34,7 +35,7 @@ private fun provideAppBuildInfo(context: Context): AppBuildInfo = AppBuildInfo(
     flavor = BuildConfig.FLAVOR,
     versionCode = BuildConfig.VERSION_CODE,
     versionName = BuildConfig.VERSION_NAME,
-    baseUrl = BuildConfig.BASE_URL,
+    tapToolsBaseUrl = BuildConfig.TAPTOOLS_BASE_URL,
 )
 
-internal val appModules = listOf(appModule, overviewModule)
+internal val appModules = listOf(appModule, overviewModule, watchListModule)

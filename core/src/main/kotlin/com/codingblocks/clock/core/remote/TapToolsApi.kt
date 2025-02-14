@@ -17,4 +17,4 @@
 
 package com.codingblocks.clock.core.remote
 
-interface MyApi
+interface TapToolsApi

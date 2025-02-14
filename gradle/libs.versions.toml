@@ -32,6 +32,8 @@ retrofit2-kotlinx-serialization-converter = "1.0.0"
 serialization-json = "1.6.2"
 slack-linter = "1.2.0"
 timber = "5.0.1"
+okhttp-digest = "3.1.1"
+gson = "2.12.1"
 
 
 [libraries]
@@ -82,7 +84,8 @@ square-okhttp-core = { module = "com.squareup.okhttp3:okhttp", version.ref = "ok
 square-okhttp-interceptor = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "okhttp" }
 square-retrofit-core = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
 square-retrofit-converter-scalars = { module = "com.squareup.retrofit2:converter-scalars", version.ref = "retrofit" }
-
+io-github-rburgst = { module = "io.github.rburgst:okhttp-digest", version.ref = "okhttp-digest" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "android-gradle-plugin" }

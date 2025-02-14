@@ -48,6 +48,7 @@ dependencies {
     implementation(libs.square.okhttp.interceptor)
     implementation(libs.square.retrofit.core)
     implementation(libs.square.retrofit.converter.scalars)
+    implementation(libs.io.github.rburgst)
 
     testImplementation(libs.junit)
     testImplementation(libs.koin.test)
