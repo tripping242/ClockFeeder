@@ -5,10 +5,9 @@ import at.florianschuster.control.Controller
 import at.florianschuster.control.createController
 import com.codingblocks.clock.base.control.ControllerViewModel
 import com.codingblocks.clock.core.DataRepo
-import com.codingblocks.clock.core.local.data.PositionFT
-import com.codingblocks.clock.core.local.data.PositionLP
-import com.codingblocks.clock.core.local.data.PositionNFT
-import com.google.android.material.shadow.ShadowDrawableWrapper
+import com.codingblocks.clock.core.local.data.PositionFTLocal
+import com.codingblocks.clock.core.local.data.PositionLPLocal
+import com.codingblocks.clock.core.local.data.PositionNFTLocal
 import kotlinx.coroutines.flow.flow
 import timber.log.Timber
 
@@ -19,6 +18,7 @@ class SettingsViewModel(
     enum class ShowType {
         FT, NFT, LP
     }
+
     sealed class Action {
         data object GetPositionsFT : Action()
         data object GetPositionsNFT : Action()
@@ -26,17 +26,17 @@ class SettingsViewModel(
     }
 
     sealed class Mutation {
-        data class PositionsFTChanged(val positions: List<PositionFT>) : Mutation()
-        data class PositionsNFTChanged(val positions: List<PositionNFT>) : Mutation()
-        data class PositionsLPChanged(val positions: List<PositionLP>) : Mutation()
+        data class PositionsFTChanged(val positions: List<PositionFTLocal>) : Mutation()
+        data class PositionsNFTChanged(val positions: List<PositionNFTLocal>) : Mutation()
+        data class PositionsLPChanged(val positions: List<PositionLPLocal>) : Mutation()
         data class ErrorChanged(val errorMessage: String?) : Mutation()
         data class ShowTypeChanged(val showType: ShowType) : Mutation()
     }
 
     data class State(
-        val positionsFT: List<PositionFT> = emptyList(),
-        val positionsNFT: List<PositionNFT> = emptyList(),
-        val positionsLP: List<PositionLP> = emptyList(),
+        val positionsFT: List<PositionFTLocal> = emptyList(),
+        val positionsNFT: List<PositionNFTLocal> = emptyList(),
+        val positionsLP: List<PositionLPLocal> = emptyList(),
         val showType: ShowType = ShowType.FT,
         val error: String? = null,
     )

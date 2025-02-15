@@ -1,7 +1,5 @@
 package com.codingblocks.clock.core.local.data
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.time.ZonedDateTime
@@ -9,12 +7,12 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @Entity(tableName = "positionFT")
-data class PositionFT(
+data class PositionFTLocal(
     var ticker: String,
-    @PrimaryKey
     var fingerprint: String,
     var adaValue: Double,
     var price: Double,
+    @PrimaryKey
     val unit: String,
     val balance: Double,
     val change30D: Double,
@@ -25,7 +23,7 @@ data class PositionFT(
 )
 
 @Entity(tableName = "positionNFT")
-data class PositionNFT(
+data class PositionNFTLocal(
     var name: String,
     @PrimaryKey
     var policy: String,
@@ -40,7 +38,7 @@ data class PositionNFT(
 )
 
 @Entity(tableName = "positionLP")
-data class PositionLP(
+data class PositionLPLocal(
     var adaValue: Double,
     var amountLP: Double,
     var exchange: String,

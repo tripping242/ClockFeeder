@@ -26,13 +26,12 @@ import com.codingblocks.clock.base.ui.scaffold.AppScaffold
 import com.codingblocks.clock.base.ui.theme.md_theme_light_error
 import com.codingblocks.clock.base.ui.utils.formatMax8decimals
 import com.codingblocks.clock.base.ui.utils.formatToNoDecimals
-import com.codingblocks.clock.core.local.data.PositionFT
-import com.codingblocks.clock.core.local.data.PositionLP
-import com.codingblocks.clock.core.local.data.PositionNFT
+import com.codingblocks.clock.core.local.data.PositionFTLocal
+import com.codingblocks.clock.core.local.data.PositionLPLocal
+import com.codingblocks.clock.core.local.data.PositionNFTLocal
 import com.codingblocks.clock.core.local.data.formattedHHMM
 import okhttp3.internal.toImmutableList
 import org.koin.androidx.compose.getViewModel
-import timber.log.Timber
 
 @Composable
 fun SettingsScreen(
@@ -122,7 +121,7 @@ fun SettingsScreen(
 }
 
 @Composable
-fun PositionNFTItem(item: PositionNFT) {
+fun PositionNFTItem(item: PositionNFTLocal) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -150,7 +149,7 @@ fun PositionNFTItem(item: PositionNFT) {
 }
 
 @Composable
-fun PositionLPItem(item: PositionLP) {
+fun PositionLPItem(item: PositionLPLocal) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -175,7 +174,7 @@ fun PositionLPItem(item: PositionLP) {
 }
 
 @Composable
-fun PositionFTItem(item: PositionFT) {
+fun PositionFTItem(item: PositionFTLocal) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
