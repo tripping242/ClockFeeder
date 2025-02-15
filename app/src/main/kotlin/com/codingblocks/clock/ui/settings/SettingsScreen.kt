@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -17,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codingblocks.clock.R
@@ -49,6 +51,8 @@ fun SettingsScreen(
                 .fillMaxSize(),
         ) {
             Row(
+                modifier = Modifier
+                    .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Button(
@@ -126,11 +130,20 @@ fun PositionNFTItem(item: PositionNFT) {
             .padding(4.dp)
             .fillMaxWidth(),
     ) {
-        Text(text = item.name)
+        Text(
+            text = item.name,
+            modifier = Modifier.width(120.dp), // Adjust width as needed
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
 
-        Text(text = item.balance.formatMax8decimals())
-
-        Text(text = item.adaValue.formatToNoDecimals())
+        Row(
+            modifier = Modifier.width(120.dp), // Adjust width as needed
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(text = item.balance.formatMax8decimals(), modifier = Modifier.weight(1f))
+            Text(text = item.adaValue.formatToNoDecimals(), modifier = Modifier.weight(1f))
+        }
 
         Text(text = item.lastUpdated.formattedHHMM())
     }
@@ -145,11 +158,17 @@ fun PositionLPItem(item: PositionLP) {
             .padding(4.dp)
             .fillMaxWidth(),
     ) {
-        Text(text = item.ticker)
+        Text(
+            text = item.ticker.removeSuffix(" LP"),
+            modifier = Modifier
+                .width(100.dp)
+                .padding(end = 16.dp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
 
-        Text(text = item.tokenAAmount.formatToNoDecimals())
-
-        Text(text = (item.adaValue/2).formatToNoDecimals())
+        Text(text = item.tokenAAmount.formatToNoDecimals(), modifier = Modifier.width(100.dp).padding(end = 16.dp),)
+        Text(text = (item.adaValue / 2).formatToNoDecimals(), modifier = Modifier.width(60.dp),)
 
         Text(text = item.lastUpdated.formattedHHMM())
     }
