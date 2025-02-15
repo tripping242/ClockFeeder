@@ -7,6 +7,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
+import com.codingblocks.clock.core.local.data.PositionLP
 import com.codingblocks.clock.core.local.data.PositionNFT
 import timber.log.Timber
 import java.time.ZonedDateTime
@@ -14,6 +15,7 @@ import java.time.ZonedDateTime
 @Dao
 interface PositionsDao {
     // FT Positions, ticker is the name, fingerprint is unique
+
     @Query("SELECT * FROM positionFT ORDER by adaValue DESC")
     fun getAllFTPositions() : List<PositionFT>
 
@@ -23,7 +25,6 @@ interface PositionsDao {
     @Transaction
     fun insertOrUpdateFT(positionFT: PositionFT) {
         val id = insertFT(positionFT)
-        Timber.tag("wims").i("updating ${positionFT.ticker} if id ${id}== -1L")
         if (id == -1L) { // Insert failed, so update the existing entry
             updateExistingFT(
                 positionFT.fingerprint,
@@ -39,7 +40,6 @@ interface PositionsDao {
     @Transaction
     fun insertOrUpdateFTList(positions: List<PositionFT>) {
         positions.forEach {
-            Timber.tag("wims").i("updating ${it.ticker}")
             insertOrUpdateFT(it) }
     }
 
@@ -47,6 +47,7 @@ interface PositionsDao {
     fun updateExistingFT(fingerprint: String, adaValue: Double, price: Double, balance: Double, change30D: Double, lastUpdated: ZonedDateTime)
 
     // NFT Positions, name is the name, policy is unique
+
     @Query("SELECT * FROM positionNFT ORDER by adaValue DESC")
     fun getAllNFTPositions() : List<PositionNFT>
 
@@ -71,4 +72,36 @@ interface PositionsDao {
 
     @Query("UPDATE positionNFT SET adaValue = :adaValue, price = :price, balance = :balance, change30D = :change30D, lastUpdated = :lastUpdated WHERE policy = :policy")
     fun updateExistingNFT(policy: String, adaValue: Double, price: Double, balance: Double, change30D: Double, lastUpdated: ZonedDateTime)
+
+    // LP positions
+
+    @Query("SELECT * FROM positionLP ORDER by adaValue DESC")
+    fun getAllLPPositions() : List<PositionLP>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    fun insertLP(positionLP: PositionLP): Long
+
+    @Transaction
+    fun insertOrUpdateLP(positionLP: PositionLP) {
+        val id = insertLP(positionLP)
+        if (id == -1L) { // Insert failed, so update the existing entry
+            updateExistingLP(
+                positionLP.ticker,
+                positionLP.adaValue,
+                positionLP.amountLP,
+                positionLP.tokenAAmount,
+                positionLP.tokenBAmount,
+                positionLP.lastUpdated,
+            )
+        }
+    }
+
+    @Transaction
+    fun insertOrUpdateLPList(positions: List<PositionLP>) {
+        positions.forEach {
+            insertOrUpdateLP(it) }
+    }
+
+    @Query("UPDATE positionLP SET adaValue = :adaValue, amountLP = :amountLP, tokenAAmount = :tokenAAmount, tokenBAmount = :tokenBAmount, lastUpdated = :lastUpdated WHERE ticker = :ticker")
+    fun updateExistingLP(ticker: String, adaValue: Double, amountLP: Double, tokenAAmount: Double, tokenBAmount: Double, lastUpdated: ZonedDateTime)
 }

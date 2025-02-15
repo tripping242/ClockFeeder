@@ -43,6 +43,7 @@ import androidx.navigation.compose.rememberNavController
 import com.codingblocks.clock.base.ui.scaffold.AppScaffold
 import com.codingblocks.clock.base.ui.theme.AppTheme
 import com.codingblocks.clock.navigation.AppNavHost
+import org.koin.core.context.KoinContext
 
 class MainActivity : ComponentActivity() {
 

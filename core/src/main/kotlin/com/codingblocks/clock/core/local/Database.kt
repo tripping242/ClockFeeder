@@ -22,10 +22,11 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.codingblocks.clock.core.local.dao.PositionsDao
 import com.codingblocks.clock.core.local.data.PositionFT
+import com.codingblocks.clock.core.local.data.PositionLP
 import com.codingblocks.clock.core.local.data.PositionNFT
 
 
-@Database(entities = [PositionFT::class, PositionNFT::class], version = 1)
+@Database(entities = [PositionFT::class, PositionNFT::class, PositionLP::class], version = 2)
 @TypeConverters(ZonedDateTimeConverter::class)
 abstract class AppDatabase : RoomDatabase() {
     companion object {

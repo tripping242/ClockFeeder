@@ -25,6 +25,7 @@ import com.codingblocks.clock.base.ui.theme.md_theme_light_error
 import com.codingblocks.clock.base.ui.utils.formatMax8decimals
 import com.codingblocks.clock.base.ui.utils.formatToNoDecimals
 import com.codingblocks.clock.core.local.data.PositionFT
+import com.codingblocks.clock.core.local.data.PositionLP
 import com.codingblocks.clock.core.local.data.PositionNFT
 import com.codingblocks.clock.core.local.data.formattedHHMM
 import okhttp3.internal.toImmutableList
@@ -54,13 +55,19 @@ fun SettingsScreen(
                     modifier = Modifier,
                     onClick = { viewModel.dispatch(SettingsViewModel.Action.GetPositionsFT) },
                 ) {
-                    Text(text = "UPDATE FT")
+                    Text(text = " FT")
                 }
                 Button(
                     modifier = Modifier,
                     onClick = { viewModel.dispatch(SettingsViewModel.Action.GetPositionsNFT) },
                 ) {
-                    Text(text = "UPDATE NFT")
+                    Text(text = "NFT")
+                }
+                Button(
+                    modifier = Modifier,
+                    onClick = { viewModel.dispatch(SettingsViewModel.Action.GetPositionsLP) },
+                ) {
+                    Text(text = " LP")
                 }
             }
             state.error?.let {
@@ -71,25 +78,39 @@ fun SettingsScreen(
             }
             val positionsFT = state.positionsFT.toImmutableList()
             val positionsNFT = state.positionsNFT.toImmutableList()
+            val positionsLP = state.positionsLP.toImmutableList()
 
-            if (state.showFT) {
-                LazyColumn(
-                    state = lazyListState,
-                    modifier = Modifier.padding(vertical = 4.dp),
-                ) {
-                    items(positionsFT) { positionFT ->
-                        PositionFTItem(item = positionFT)
+            when (state.showType) {
+                SettingsViewModel.ShowType.FT -> {
+                    LazyColumn(
+                        state = lazyListState,
+                        modifier = Modifier.padding(vertical = 4.dp),
+                    ) {
+                        items(positionsFT) { positionFT ->
+                            PositionFTItem(item = positionFT)
+                        }
                     }
                 }
-            } else {
-                Timber.tag("wims").i("show Nft, size ${positionsNFT.size}")
-                LazyColumn(
-                    state = lazyListState,
-                    modifier = Modifier.padding(vertical = 4.dp),
-                ) {
-                    items(positionsNFT) { positionNFT ->
-                        PositionNFTItem(item = positionNFT)
+                SettingsViewModel.ShowType.NFT -> {
+                    LazyColumn(
+                        state = lazyListState,
+                        modifier = Modifier.padding(vertical = 4.dp),
+                    ) {
+                        items(positionsNFT) { positionNFT ->
+                            PositionNFTItem(item = positionNFT)
+                        }
                     }
+                }
+                SettingsViewModel.ShowType.LP -> {
+                    LazyColumn(
+                        state = lazyListState,
+                        modifier = Modifier.padding(vertical = 4.dp),
+                    ) {
+                        items(positionsLP) { positionLP ->
+                            PositionLPItem(item = positionLP)
+                        }
+                    }
+
                 }
             }
         }
@@ -110,6 +131,25 @@ fun PositionNFTItem(item: PositionNFT) {
         Text(text = item.balance.formatMax8decimals())
 
         Text(text = item.adaValue.formatToNoDecimals())
+
+        Text(text = item.lastUpdated.formattedHHMM())
+    }
+}
+
+@Composable
+fun PositionLPItem(item: PositionLP) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier
+            .padding(4.dp)
+            .fillMaxWidth(),
+    ) {
+        Text(text = item.ticker)
+
+        Text(text = item.tokenAAmount.formatToNoDecimals())
+
+        Text(text = (item.adaValue/2).formatToNoDecimals())
 
         Text(text = item.lastUpdated.formattedHHMM())
     }

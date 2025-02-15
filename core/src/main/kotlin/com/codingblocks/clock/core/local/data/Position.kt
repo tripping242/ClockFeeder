@@ -39,6 +39,26 @@ data class PositionNFT(
     var lastUpdated: ZonedDateTime,
 )
 
+@Entity(tableName = "positionLP")
+data class PositionLP(
+    var adaValue: Double,
+    var amountLP: Double,
+    var exchange: String,
+    @PrimaryKey
+    var ticker: String,
+    var tokenA: String,
+    var tokenAAmount: Double,
+    var tokenAName: String,
+    var tokenB: String,
+    var tokenBAmount: Double,
+    var tokenBName: String,
+    var unit: String,
+    var showInFeed: Boolean,
+    var watchList: Int,
+    var createdAt: ZonedDateTime,
+    var lastUpdated: ZonedDateTime,
+)
+
 fun ZonedDateTime.formatteddMyHHMM(): String {
     val formatter = DateTimeFormatter.ofPattern("dd.MMM.yyyy, HH:mm", Locale.getDefault())
     return this.format(formatter)

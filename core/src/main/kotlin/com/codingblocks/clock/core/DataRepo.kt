@@ -22,6 +22,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import com.codingblocks.clock.core.local.AppDatabase
 import com.codingblocks.clock.core.local.data.PositionFT
+import com.codingblocks.clock.core.local.data.PositionLP
 import com.codingblocks.clock.core.local.data.PositionNFT
 import com.codingblocks.clock.core.manager.ClockManager
 import com.codingblocks.clock.core.manager.ClockManagerImpl
@@ -30,6 +31,7 @@ import com.codingblocks.clock.core.manager.TapToolsManagerImpl
 import com.codingblocks.clock.core.model.AppBuildInfo
 import com.codingblocks.clock.core.model.clock.StatusResponse
 import com.codingblocks.clock.core.model.taptools.PositionsFt
+import com.codingblocks.clock.core.model.taptools.PositionsLp
 import com.codingblocks.clock.core.model.taptools.PositionsNft
 import com.codingblocks.clock.core.model.taptools.PositionsResponse
 import com.codingblocks.clock.core.model.taptools.TapToolsConfig
@@ -44,6 +46,7 @@ interface DataRepo {
     suspend fun getPositionsForAddress(address: String) : Result<PositionsResponse>
     suspend fun getFTPositionsForWatchlist() : List<PositionFT>
     suspend fun getNFTPositionsForWatchlist() : List<PositionNFT>
+    suspend fun getLPPositionsForWatchlist() : List<PositionLP>
     suspend fun updateOrInsertPositions(positionResponse: PositionsResponse)
 }
 
@@ -91,12 +94,18 @@ class CoreDataRepo(
         return positionsDao.getAllNFTPositions()
     }
 
+    override suspend fun getLPPositionsForWatchlist(): List<PositionLP> {
+        return positionsDao.getAllLPPositions()
+    }
+
     override suspend fun updateOrInsertPositions(positionResponse: PositionsResponse) {
         Timber.tag("wims").i("start with FT ${positionResponse.positionsFt.size}")
         positionsDao.insertOrUpdateFTList(positionResponse.positionsFt.map { it.toPositionFT() })
         Timber.tag("wims").i("done with FT, now start NFT ${positionResponse.positionsNft.size}")
         positionsDao.insertOrUpdateNFTList(positionResponse.positionsNft.map { it.toPositionNFT() })
-        Timber.tag("wims").i("done with NFT")
+        Timber.tag("wims").i("done with NFT,now start NFT ${positionResponse.positionsLp.size}")
+        positionsDao.insertOrUpdateLPList(positionResponse.positionsLp.map { it.toPositionsLP() })
+        Timber.tag("wims").i("done with LP")
     }
 }
 
@@ -128,5 +137,25 @@ fun PositionsNft.toPositionNFT(): PositionNFT {
         watchList = 0,  // Default value, adjust if needed
         createdAt = ZonedDateTime.now(),
         lastUpdated = ZonedDateTime.now()
+    )
+}
+
+fun PositionsLp.toPositionsLP(): PositionLP {
+    return PositionLP(
+        adaValue = this.adaValue,
+        amountLP = this.amountLP,
+        exchange = this.exchange,
+        ticker = this.ticker,
+        tokenA = this.tokenA,
+        tokenAAmount = this.tokenAAmount,
+        tokenAName = this.tokenAName,
+        tokenB = this.tokenB,
+        tokenBAmount = this.tokenBAmount,
+        tokenBName = this.tokenBName,
+        unit = this.unit,
+        showInFeed = false,  // Default value, adjust if needed
+        watchList = 0,  // Default value, adjust if needed
+        createdAt = ZonedDateTime.now(),
+        lastUpdated = ZonedDateTime.now(),
     )
 }
