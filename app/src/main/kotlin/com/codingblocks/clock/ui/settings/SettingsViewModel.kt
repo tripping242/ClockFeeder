@@ -60,7 +60,6 @@ class SettingsViewModel(
                         try {
                             emit(Mutation.ErrorChanged(null))
                             dataRepo.getNFTPositionsForWatchlist().let {
-                                Timber.tag("wims").i("got ${it.size} NFTS")
                                 emit(Mutation.PositionsNFTChanged(it)) }
                             emit(Mutation.ShowTypeChanged(ShowType.NFT))
                         } catch (e: Exception) {
@@ -72,7 +71,6 @@ class SettingsViewModel(
                         try {
                             emit(Mutation.ErrorChanged(null))
                             dataRepo.getLPPositionsForWatchlist().let {
-                                Timber.tag("wims").i("got ${it.size} LP")
                                 emit(Mutation.PositionsLPChanged(it)) }
                             emit(Mutation.ShowTypeChanged(ShowType.LP))
                         } catch (e: Exception) {

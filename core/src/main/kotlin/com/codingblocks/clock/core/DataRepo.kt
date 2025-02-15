@@ -34,6 +34,7 @@ import com.codingblocks.clock.core.model.taptools.PositionsNft
 import com.codingblocks.clock.core.model.taptools.PositionsResponse
 import com.codingblocks.clock.core.model.taptools.TapToolsConfig
 import okhttp3.OkHttpClient
+import timber.log.Timber
 import java.time.ZonedDateTime
 
 interface DataRepo {
@@ -119,7 +120,7 @@ class CoreDataRepo(
     private fun getAllPositionsFTIncludingLP(): List<PositionFTLocal> {
         val cachedPositionsLP = positionsDao.getAllLPPositions()
         val cachedPositionsFT = positionsDao.getAllFTPositions()
-        val ftUnits = cachedPositionsLP.map { it.unit }.toSet()
+        val ftUnits = cachedPositionsFT.map { it.unit }.toSet()
 
         // add adaValue and Balance for each PostionFT we already have
         val positionsFTIncludingLP = cachedPositionsFT.map { positionFT ->
@@ -153,16 +154,16 @@ class CoreDataRepo(
             val mergedPosition = positionsForUnit.reduce { acc, position ->
                 PositionFTLocal(
                     unit = unit,
-                    fingerprint = position.fingerprint, // Use the fingerprint from the first entry
-                    adaValue = acc.adaValue + position.adaValue, // Sum adaValue
-                    price = acc.price, // Use the price from the first entry (or average if needed)
-                    ticker = position.unit, // Use the unit from the first entry
-                    balance = acc.balance + position.balance, // Sum balance
-                    change30D = acc.change30D, // Use the change30D from the first entry (or average if needed)
-                    showInFeed = acc.showInFeed, // Use the showInFeed from the first entry
-                    watchList = acc.watchList, // Use the watchList from the first entry
-                    createdAt = acc.createdAt, // Use the createdAt from the first entry
-                    lastUpdated = ZonedDateTime.now() // Update lastUpdated to now
+                    fingerprint = position.fingerprint,
+                    adaValue = acc.adaValue + position.adaValue,
+                    price = acc.price,
+                    ticker = position.unit,
+                    balance = acc.balance + position.balance,
+                    change30D = acc.change30D,
+                    showInFeed = acc.showInFeed,
+                    watchList = acc.watchList,
+                    createdAt = acc.createdAt,
+                    lastUpdated = ZonedDateTime.now()
                 )
             }
             mergedPosition
