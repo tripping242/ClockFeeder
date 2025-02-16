@@ -44,7 +44,9 @@ import java.time.ZonedDateTime
 interface DataRepo {
     val watchlistsWithPositions: List<WatchlistWithPositions>
 
+    // Blockclock
     suspend fun getClockStatus() : Result<StatusResponse>
+
     // wallet with address
     suspend fun resolveAdaHandle(handle: String): Result<String>
     suspend fun getStakeAddress(address: String) : Result<String>

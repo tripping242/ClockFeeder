@@ -29,6 +29,7 @@ class WatchListViewModel(
     }
 
     sealed class Action {
+        data object AddNewWatchlist : Action()
         data object GetPositions : Action()
         data class SelectListToShow(val showType: ShowType) : Action()
         data object GetClockStatus : Action()
@@ -111,9 +112,16 @@ class WatchListViewModel(
                             Timber.d("could not retreive Positions $e")
                         }
                     }
+                    Action.AddNewWatchlist -> flow {
+                        // trigger dialog
+                        // see above getPositions
+
+                    }
                     is Action.SelectListToShow -> flow {
                         emit(Mutation.ShowTypeChanged(action.showType))
                     }
+
+
                 }
             },
             reducer = { mutation, previousState ->

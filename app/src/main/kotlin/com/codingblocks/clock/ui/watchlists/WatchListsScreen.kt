@@ -55,9 +55,9 @@ fun WatchlistsScreen(
             if (state.currentFirstWatchListWithPositions == null) {
                 Button(
                     modifier = Modifier.fillMaxWidth(),
-                    onClick = { viewModel.dispatch(WatchListViewModel.Action.GetPositions) },
+                    onClick = { viewModel.dispatch(WatchListViewModel.Action.AddNewWatchlist) },
                 ) {
-                    Text(text = "GET DUMMY WATCH LIST LOADED")
+                    Text(text = "ADD WATCH LIST")
                 }
             } else {
                 // todo lazylist laer, not it maps to first possible
