@@ -1,5 +1,6 @@
 package com.codingblocks.clock.base.ui.dialog
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -7,6 +8,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,15 +25,14 @@ fun FullScreenDialog(
 ) {
     Column(
         modifier = modifier
-        .background(Color.Gray)
-        .fillMaxSize()
-        .padding(16.dp)
+            .fillMaxSize()
     ) {
         Dialog(
             onDismissRequest = onDismissRequest,
             // only allow dismissRequests, to be handled in calling function (are you sure)...
             // dont close dialog on back press, as we cant show "are you sure"
             DialogProperties(
+                usePlatformDefaultWidth = false,
                 dismissOnBackPress = false,
                 dismissOnClickOutside = false,
             )

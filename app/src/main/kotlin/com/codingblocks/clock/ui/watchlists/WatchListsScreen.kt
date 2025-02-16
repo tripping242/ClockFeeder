@@ -14,6 +14,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
@@ -88,7 +90,9 @@ fun WatchlistsScreen(
                         val sizeFTLP = currentWatchListWithPositions.positionsFTIncludingLP.size
 
                         Column(
-                            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth(),
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -138,7 +142,9 @@ fun WatchlistsScreen(
                             }
                         }
                         Column(
-                            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth(),
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -287,10 +293,13 @@ fun AddWatchListDialog(
     var checkedStateIncludeNFT: Boolean by remember { mutableStateOf(true) }
     var minFTPostionAmount: Int by remember { mutableIntStateOf(0) }
     var minNFTPostionAmount: Int by remember { mutableIntStateOf(0) }
+    val scrollState = rememberScrollState()
 
     Column(
         modifier = modifier
             .fillMaxSize()
+            .background(Color.White)
+            .verticalScroll(scrollState)
             .padding(16.dp),
         horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -309,7 +318,7 @@ fun AddWatchListDialog(
                 onValueChange = onAddressChange,
                 modifier = Modifier
                     .padding(end = 16.dp)
-                    .weight(0.6f)
+                    .weight(0.3f)
             )
             Button(
                 enabled = address.isNotEmpty() && address.length > 2,
@@ -411,6 +420,14 @@ fun AddWatchListDialog(
                     style = AppTheme.typography.body2,
                     color = md_theme_light_error,
                 )
+        }
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = {
+                onDismiss.invoke()
+            }
+        ) {
+            Text(text = "CANCEL")
         }
     }
 }
