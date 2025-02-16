@@ -22,7 +22,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codingblocks.clock.R
+import com.codingblocks.clock.base.ui.card.ExpandableCard
 import com.codingblocks.clock.base.ui.scaffold.AppScaffold
+import com.codingblocks.clock.base.ui.theme.AppTheme
 import com.codingblocks.clock.base.ui.theme.md_theme_light_error
 import com.codingblocks.clock.base.ui.utils.formatMax8decimals
 import com.codingblocks.clock.base.ui.utils.formatToNoDecimals
@@ -50,71 +52,160 @@ fun WatchlistsScreen(
                 .padding(16.dp)
                 .fillMaxSize(),
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
+            if (state.currentFirstWatchListWithPositions == null) {
                 Button(
-                    modifier = Modifier,
-                    onClick = { viewModel.dispatch(WatchListViewModel.Action.SelectListToShow(WatchListViewModel.ShowType.FT)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { viewModel.dispatch(WatchListViewModel.Action.GetPositions) },
                 ) {
-                    Text(text = " FT")
+                    Text(text = "GET DUMMY WATCH LIST LOADED")
                 }
-                Button(
-                    modifier = Modifier,
-                    onClick = { viewModel.dispatch(WatchListViewModel.Action.SelectListToShow(WatchListViewModel.ShowType.NFT)) },
-                ) {
-                    Text(text = "NTF")
-                }
-                Button(
-                    modifier = Modifier,
-                    onClick = { viewModel.dispatch(WatchListViewModel.Action.SelectListToShow(WatchListViewModel.ShowType.LP)) },
-                ) {
-                    Text(text = " LP")
-                }
-                Button(
-                    modifier = Modifier,
-                    onClick = { viewModel.dispatch(WatchListViewModel.Action.SelectListToShow(WatchListViewModel.ShowType.FT_LP)) },
-                ) {
-                    Text(text = " FT & LP")
-                }
-            }
+            } else {
+                // todo lazylist laer, not it maps to first possible
+                state.currentFirstWatchListWithPositions?.let { currentWatchListWithPositions ->
+                    ExpandableCard(topContent = {
+                        val config = currentWatchListWithPositions.watchListConfig
+                        val sizeFT = currentWatchListWithPositions.positionsFT.size
+                        val sizeNFT = currentWatchListWithPositions.positionsFT.size
+                        val sizeLP = currentWatchListWithPositions.positionsFT.size
+                        val sizeFTLP = currentWatchListWithPositions.positionsFTIncludingLP.size
 
-            val positionItems = when (state.showType) {
-                ShowType.FT -> state.positionsFT.map { PositionItem.FT(it) }
-                ShowType.FT_LP -> state.positionsFTIncludingLP.map { PositionItem.FT(it) }
-                ShowType.NFT -> state.positionsNFT.map { PositionItem.NFT(it) }
-                ShowType.LP -> state.positionsLP.map { PositionItem.LP(it) }
-            }
+                        Column(
+                            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = config.name,
+                                    style = AppTheme.typography.h6,
+                                )
+                                Column(
+                                    modifier = Modifier.padding(4.dp)
+                                ) {
+                                    Text(text = "#FT = $sizeFT")
+                                    Text(text = "#NFT = $sizeNFT")
+                                    Text(text = "#LP = $sizeLP")
+                                }
 
-            LazyColumn(
-                state = lazyListState,
-                modifier = Modifier.padding(vertical = 4.dp),
-            ) {
-                items(positionItems) { positionItem ->
-                    when (positionItem) {
-                        is PositionItem.FT -> PositionFTItem(item = positionItem.positionFT)
-                        is PositionItem.NFT -> PositionNFTItem(item = positionItem.positionNFT)
-                        is PositionItem.LP -> PositionLPItem(item = positionItem.positionLP)
-                    }
+                            }
+                        }
+
+                    }, expandedContent = {
+                        val positionItems = when (state.showType) {
+                            ShowType.FT -> currentWatchListWithPositions.positionsFT.map {
+                                PositionItem.FT(
+                                    it
+                                )
+                            }
+
+                            ShowType.FT_LP -> currentWatchListWithPositions.positionsFTIncludingLP.map {
+                                PositionItem.FT(
+                                    it
+                                )
+                            }
+
+                            ShowType.NFT -> currentWatchListWithPositions.positionsNFT.map {
+                                PositionItem.NFT(
+                                    it
+                                )
+                            }
+
+                            ShowType.LP -> currentWatchListWithPositions.positionsLP.map {
+                                PositionItem.LP(
+                                    it
+                                )
+                            }
+                        }
+                        Column(
+                            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Button(
+                                    modifier = Modifier,
+                                    onClick = {
+                                        viewModel.dispatch(
+                                            WatchListViewModel.Action.SelectListToShow(
+                                                WatchListViewModel.ShowType.FT
+                                            )
+                                        )
+                                    },
+                                ) {
+                                    Text(text = " FT")
+                                }
+                                Button(
+                                    modifier = Modifier,
+                                    onClick = {
+                                        viewModel.dispatch(
+                                            WatchListViewModel.Action.SelectListToShow(
+                                                WatchListViewModel.ShowType.NFT
+                                            )
+                                        )
+                                    },
+                                ) {
+                                    Text(text = "NTF")
+                                }
+                                Button(
+                                    modifier = Modifier,
+                                    onClick = {
+                                        viewModel.dispatch(
+                                            WatchListViewModel.Action.SelectListToShow(
+                                                WatchListViewModel.ShowType.LP
+                                            )
+                                        )
+                                    },
+                                ) {
+                                    Text(text = " LP")
+                                }
+                                Button(
+                                    modifier = Modifier,
+                                    onClick = {
+                                        viewModel.dispatch(
+                                            WatchListViewModel.Action.SelectListToShow(
+                                                WatchListViewModel.ShowType.FT_LP
+                                            )
+                                        )
+                                    },
+                                ) {
+                                    Text(text = " FT & LP")
+                                }
+                            }
+
+                            LazyColumn(
+                                state = lazyListState,
+                                modifier = Modifier.padding(vertical = 4.dp),
+                            ) {
+                                items(positionItems) { positionItem ->
+                                    when (positionItem) {
+                                        is PositionItem.FT -> PositionFTItem(item = positionItem.positionFT)
+                                        is PositionItem.NFT -> PositionNFTItem(item = positionItem.positionNFT)
+                                        is PositionItem.LP -> PositionLPItem(item = positionItem.positionLP)
+                                    }
+                                }
+                            }
+                        }
+                    })
                 }
-            }
 
-            state.error?.let {
-                Text(
-                    text = it,
-                    color = md_theme_light_error,
-                )
-            }
-            Button(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { viewModel.dispatch(WatchListViewModel.Action.GetClockStatus) },
-            ) {
-                Text(text = "GET CLOCK STATUS")
-            }
-            state.status?.let {
-                Text(prettyPrintDataClass(it))
+                state.error?.let {
+                    Text(
+                        text = it,
+                        color = md_theme_light_error,
+                    )
+                }
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { viewModel.dispatch(WatchListViewModel.Action.GetClockStatus) },
+                ) {
+                    Text(text = "GET CLOCK STATUS")
+                }
+                state.status?.let {
+                    Text(prettyPrintDataClass(it))
+                }
             }
         }
     }
@@ -131,19 +222,22 @@ fun PositionNFTItem(item: PositionNFTLocal) {
             .fillMaxWidth(),
     ) {
         Text(
-            text = item.name,
-            modifier = Modifier.width(120.dp), // Adjust width as needed
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            text = item.name, modifier = Modifier.width(160.dp), // Adjust width as needed
+            maxLines = 1, overflow = TextOverflow.Ellipsis
         )
 
-        Row(
-            modifier = Modifier.width(120.dp), // Adjust width as needed
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(text = item.balance.formatMax8decimals(), modifier = Modifier.weight(1f))
-            Text(text = item.adaValue.formatToNoDecimals(), modifier = Modifier.weight(1f))
-        }
+        Text(
+            text = item.balance.formatToNoDecimals(),
+            modifier = Modifier
+                .width(40.dp)
+                .padding(end = 16.dp)
+        )
+        Text(
+            text = item.adaValue.formatToNoDecimals(),
+            modifier = Modifier
+                .width(60.dp)
+                .padding(end = 16.dp)
+        )
 
         Text(text = item.lastUpdated.formattedHHMM())
     }
@@ -167,8 +261,13 @@ fun PositionLPItem(item: PositionLPLocal) {
             overflow = TextOverflow.Ellipsis
         )
 
-        Text(text = item.tokenAAmount.formatToNoDecimals(), modifier = Modifier.width(100.dp).padding(end = 16.dp),)
-        Text(text = (item.adaValue / 2).formatToNoDecimals(), modifier = Modifier.width(60.dp),)
+        Text(
+            text = item.tokenAAmount.formatToNoDecimals(),
+            modifier = Modifier
+                .width(100.dp)
+                .padding(end = 16.dp),
+        )
+        Text(text = (item.adaValue / 2).formatToNoDecimals(), modifier = Modifier.width(60.dp))
 
         Text(text = item.lastUpdated.formattedHHMM())
     }
@@ -183,11 +282,28 @@ fun PositionFTItem(item: PositionFTLocal) {
             .padding(4.dp)
             .fillMaxWidth(),
     ) {
-        Text(text = item.ticker)
+        Text(
+            text = item.ticker,
+            modifier = Modifier
+                .width(100.dp)
+                .padding(end = 16.dp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
 
-        Text(text = item.balance.formatMax8decimals())
+        Text(
+            text = item.balance.formatMax8decimals(),
+            modifier = Modifier
+                .width(100.dp)
+                .padding(end = 16.dp)
+        )
 
-        Text(text = item.adaValue.formatToNoDecimals())
+        Text(
+            text = item.adaValue.formatToNoDecimals(),
+            modifier = Modifier
+                .width(60.dp)
+                .padding(end = 16.dp)
+        )
 
         Text(text = item.lastUpdated.formattedHHMM())
     }

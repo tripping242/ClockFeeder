@@ -35,11 +35,11 @@ class FeedsViewModel(
                     Action.GetPositions -> flow {
                         try {
                             emit(Mutation.ErrorChanged(null))
-                            dataRepo.getPositionsForAddress("stake1uy368slqls4u66g0502krmyasfdke3elfh0z6qgczmylx7ce6frnl")
+                            /*dataRepo.loadPositionsForAddress("stake1uy368slqls4u66g0502krmyasfdke3elfh0z6qgczmylx7ce6frnl")
                                 .onSuccess {
                                     dataRepo.updateOrInsertPositions(it)
                                     emit(Mutation.PositionsChanged(it))  }
-                                .onFailure { emit(Mutation.ErrorChanged("could not retreive Positions:\n$it")) }
+                                .onFailure { emit(Mutation.ErrorChanged("could not retreive Positions:\n$it")) }*/
                         } catch (e: Exception) {
                             Timber.d("could not retreive Positions $e")
                         }

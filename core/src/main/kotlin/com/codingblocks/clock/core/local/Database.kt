@@ -21,12 +21,14 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.codingblocks.clock.core.local.dao.PositionsDao
+import com.codingblocks.clock.core.local.dao.WatchListsDao
 import com.codingblocks.clock.core.local.data.PositionFTLocal
 import com.codingblocks.clock.core.local.data.PositionLPLocal
 import com.codingblocks.clock.core.local.data.PositionNFTLocal
+import com.codingblocks.clock.core.local.data.WatchListConfig
 
 
-@Database(entities = [PositionFTLocal::class, PositionNFTLocal::class, PositionLPLocal::class], version = 2)
+@Database(entities = [PositionFTLocal::class, PositionNFTLocal::class, PositionLPLocal::class, WatchListConfig::class], version = 2, exportSchema = false)
 @TypeConverters(ZonedDateTimeConverter::class)
 abstract class AppDatabase : RoomDatabase() {
     companion object {
@@ -34,6 +36,7 @@ abstract class AppDatabase : RoomDatabase() {
     }
 
     abstract fun getPositionsDao() : PositionsDao
+    abstract fun getWatchListsDao() : WatchListsDao
 }
 
 

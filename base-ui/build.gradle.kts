@@ -77,6 +77,7 @@ dependencies {
     api(libs.koin.android)
     api(libs.koin.androidx.compose)
     api(libs.gson)
+    api(libs.kotlinx.collections.immutable)
     debugApi(libs.square.leakcanary.android)
     releaseApi(libs.square.leakcanary.objectwatcher)
     lintChecks(libs.slack.lint.compose)

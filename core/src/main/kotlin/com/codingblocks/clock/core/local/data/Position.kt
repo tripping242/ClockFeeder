@@ -1,12 +1,25 @@
 package com.codingblocks.clock.core.local.data
 
 import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-@Entity(tableName = "positionFT")
+@Entity(
+    tableName = "positionFT",
+    foreignKeys = [
+        ForeignKey(
+            entity = WatchListConfig::class,
+            parentColumns = ["watchlistNumber"],
+            childColumns = ["watchList"],
+            onDelete = ForeignKey.CASCADE // Optional: Cascade delete if watchlist is deleted
+        )
+    ],
+    indices = [Index(value = ["watchList"])]
+)
 data class PositionFTLocal(
     var ticker: String,
     var fingerprint: String,
@@ -22,7 +35,18 @@ data class PositionFTLocal(
     var lastUpdated: ZonedDateTime,
 )
 
-@Entity(tableName = "positionNFT")
+@Entity(
+    tableName = "positionNFT",
+    foreignKeys = [
+        ForeignKey(
+            entity = WatchListConfig::class,
+            parentColumns = ["watchlistNumber"],
+            childColumns = ["watchList"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [Index(value = ["watchList"])]
+)
 data class PositionNFTLocal(
     var name: String,
     @PrimaryKey
@@ -37,7 +61,18 @@ data class PositionNFTLocal(
     var lastUpdated: ZonedDateTime,
 )
 
-@Entity(tableName = "positionLP")
+@Entity(
+    tableName = "positionLP",
+    foreignKeys = [
+        ForeignKey(
+            entity = WatchListConfig::class,
+            parentColumns = ["watchlistNumber"],
+            childColumns = ["watchList"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [Index(value = ["watchList"])]
+)
 data class PositionLPLocal(
     var adaValue: Double,
     var amountLP: Double,

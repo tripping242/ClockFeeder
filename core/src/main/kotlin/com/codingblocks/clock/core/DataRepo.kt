@@ -22,6 +22,8 @@ import com.codingblocks.clock.core.local.AppDatabase
 import com.codingblocks.clock.core.local.data.PositionFTLocal
 import com.codingblocks.clock.core.local.data.PositionLPLocal
 import com.codingblocks.clock.core.local.data.PositionNFTLocal
+import com.codingblocks.clock.core.local.data.WatchListConfig
+import com.codingblocks.clock.core.local.data.WatchlistWithPositions
 import com.codingblocks.clock.core.manager.ClockManager
 import com.codingblocks.clock.core.manager.ClockManagerImpl
 import com.codingblocks.clock.core.manager.TapToolsManager
@@ -34,21 +36,27 @@ import com.codingblocks.clock.core.model.taptools.PositionsNft
 import com.codingblocks.clock.core.model.taptools.PositionsResponse
 import com.codingblocks.clock.core.model.taptools.TapToolsConfig
 import okhttp3.OkHttpClient
-import timber.log.Timber
 import java.time.ZonedDateTime
 
 interface DataRepo {
-    val positionsFT: List<PositionFTLocal>
+    val watchlistsWithPositions: List<WatchlistWithPositions>
+
+    /*val positionsFT: List<PositionFTLocal>
     val positionsNFT: List<PositionNFTLocal>
     val positionsLP: List<PositionLPLocal>
-    val positionsFTIncludingLP: List<PositionFTLocal>
+    val positionsFTIncludingLP: List<PositionFTLocal>*/
     suspend fun getClockStatus() : Result<StatusResponse>
-    suspend fun getPositionsForAddress(address: String) : Result<PositionsResponse>
-    suspend fun getFTPositionsForWatchlist() : List<PositionFTLocal>
+    // wallet wit address
+    suspend fun loadPositionsForAddress(address: String) : Result<PositionsResponse>
+    suspend fun updateOrInsertPositions(watchList: Int, positionResponse: PositionsResponse)
+
+    // watchlist with contents
+    suspend fun addWatchlist(name: String, includeLPinFT: Boolean, includeNFT: Boolean, showLPTab: Boolean, walletAddress: String?) : Int
+    // todo to refresh, like reload watchlists we mmight still need a call refreshPositionsForWatchlist
+    /*suspend fun getFTPositionsForWatchlist() : List<PositionFTLocal>
     suspend fun getNFTPositionsForWatchlist() : List<PositionNFTLocal>
     suspend fun getLPPositionsForWatchlist() : List<PositionLPLocal>
-    suspend fun updateOrInsertPositions(positionResponse: PositionsResponse)
-    suspend fun getFTPositionsForWatchlistIncludingLP() : List<PositionFTLocal>
+    suspend fun getFTPositionsForWatchlistIncludingLP() : List<PositionFTLocal>*/
 }
 
 class CoreDataRepo(
@@ -60,43 +68,40 @@ class CoreDataRepo(
     private val tapToolsManager: TapToolsManager = provideTapToolsManager()
     private val clockManager: ClockManager = provideClockManager()
     private val positionsDao = database.getPositionsDao()
+    private val watchlistsDao = database.getWatchListsDao()
 
-    private fun provideTapToolsManager() : TapToolsManager {
+    private fun provideTapToolsManager(): TapToolsManager {
         return TapToolsManagerImpl.Builder(
-            context,
-            TapToolsConfig(appBuildInfo.tapToolsBaseUrl)
-        )
-            .setOkHttpClient(okHttpClient)
-            .build()
+            context, TapToolsConfig(appBuildInfo.tapToolsBaseUrl)
+        ).setOkHttpClient(okHttpClient).build()
     }
 
-    private fun provideClockManager() : ClockManager {
+    private fun provideClockManager(): ClockManager {
         return ClockManagerImpl.Builder(
             context,
-        )
-            .setOkHttpClient(
-                okHttpClient.newBuilder()
-                    .build()
-            )
-            .build()
+        ).setOkHttpClient(
+                okHttpClient.newBuilder().build()
+            ).build()
     }
 
-    override val positionsFT: List<PositionFTLocal>
+    override val watchlistsWithPositions: List<WatchlistWithPositions>
+        get() = database.getWatchListsDao().getWatchlistsWithPositions()
+
+    /*override val positionsFT: Pair<WatchListConfig, List<PositionFTLocal>>
         get() = database.getPositionsDao().getAllFTPositions()
     override val positionsNFT: List<PositionNFTLocal>
         get() = database.getPositionsDao().getAllNFTPositions()
     override val positionsLP: List<PositionLPLocal>
         get() = database.getPositionsDao().getAllLPPositions()
     override val positionsFTIncludingLP: List<PositionFTLocal>
-        get() = getAllPositionsFTIncludingLP()
+        get() = getAllPositionsFTIncludingLP()*/
 
-    override suspend fun getClockStatus(): Result<StatusResponse> =
-        clockManager.getStatus()
+    override suspend fun getClockStatus(): Result<StatusResponse> = clockManager.getStatus()
 
-    override suspend fun getPositionsForAddress(address: String): Result<PositionsResponse> =
+    override suspend fun loadPositionsForAddress(address: String): Result<PositionsResponse> =
         tapToolsManager.getPositionsForAddress(address)
 
-    override suspend fun getFTPositionsForWatchlist(): List<PositionFTLocal> {
+    /*override suspend fun getFTPositionsForWatchlist(): List<PositionFTLocal> {
         return positionsDao.getAllFTPositions()
     }
 
@@ -107,92 +112,56 @@ class CoreDataRepo(
     override suspend fun getLPPositionsForWatchlist(): List<PositionLPLocal> {
         return positionsDao.getAllLPPositions()
     }
-
-    override suspend fun updateOrInsertPositions(positionResponse: PositionsResponse) {
-        positionsDao.insertOrUpdateFTList(positionResponse.positionsFt.map { it.toPositionFT() })
-        positionsDao.insertOrUpdateNFTList(positionResponse.positionsNft.map { it.toPositionNFT() })
-        positionsDao.insertOrUpdateLPList(positionResponse.positionsLp.map { it.toPositionsLP() })
+*/
+    override suspend fun updateOrInsertPositions(
+        watchList: Int,
+        positionResponse: PositionsResponse
+    ) {
+        positionsDao.insertOrUpdateFTList(positionResponse.positionsFt.map {
+            it.toPositionFT(
+                watchList
+            )
+        })
+        positionsDao.insertOrUpdateNFTList(positionResponse.positionsNft.map {
+            it.toPositionNFT(
+                watchList
+            )
+        })
+        positionsDao.insertOrUpdateLPList(positionResponse.positionsLp.map {
+            it.toPositionsLP(
+                watchList
+            )
+        })
     }
 
-    override suspend fun getFTPositionsForWatchlistIncludingLP(): List<PositionFTLocal> =
-        getAllPositionsFTIncludingLP()
-
-    private fun getAllPositionsFTIncludingLP(): List<PositionFTLocal> {
-        val cachedPositionsLP = positionsDao.getAllLPPositions()
-        val cachedPositionsFT = positionsDao.getAllFTPositions()
-        val ftUnits = cachedPositionsFT.map { it.unit }.toSet()
-
-        // add adaValue and Balance for each PostionFT we already have
-        val positionsFTIncludingLP = cachedPositionsFT.map { positionFT ->
-            val (lpAdaValue, lpBalance) = calculateTotalAdaValueAndBalance(cachedPositionsLP, positionFT.unit)
-            if (lpAdaValue != positionFT.adaValue) {
-                positionFT.copy(
-                    adaValue = lpAdaValue + positionFT.adaValue,
-                    balance = lpBalance + positionFT.balance,
-                )
-            } else {
-                positionFT
-            }
-        }
-        // create FT positions for LP positions A and/or B that dont exist yet as a seperate FT position
-        val positionsFtFromLP: MutableList<PositionFTLocal> = mutableListOf()
-        cachedPositionsLP.mapNotNull { lp ->
-            when {
-                lp.tokenA !in ftUnits && lp.tokenB !in ftUnits -> {
-                    positionsFtFromLP.add(lp.tokenAToPositionFT())
-                    positionsFtFromLP.add(lp.tokenBToPositionFT())
-                }
-                lp.tokenA !in ftUnits -> positionsFtFromLP.add(lp.tokenAToPositionFT())
-                lp.tokenB !in ftUnits -> positionsFtFromLP.add(lp.tokenBToPositionFT())
-                else -> null
-            }
-        }
-
-        // group multiple entries for same unt and merge into one
-        val groupedPositions = positionsFtFromLP.groupBy { it.unit }
-        val uniqueFTFromLP = groupedPositions.map { (unit, positionsForUnit) ->
-            val mergedPosition = positionsForUnit.reduce { acc, position ->
-                PositionFTLocal(
-                    unit = unit,
-                    fingerprint = position.fingerprint,
-                    adaValue = acc.adaValue + position.adaValue,
-                    price = acc.price,
-                    ticker = position.unit,
-                    balance = acc.balance + position.balance,
-                    change30D = acc.change30D,
-                    showInFeed = acc.showInFeed,
-                    watchList = acc.watchList,
-                    createdAt = acc.createdAt,
-                    lastUpdated = ZonedDateTime.now()
-                )
-            }
-            mergedPosition
-        }
-
-        return (positionsFTIncludingLP + uniqueFTFromLP).sortedByDescending { it.adaValue }
-    }
-}
-
-fun calculateTotalAdaValueAndBalance(cachedPositionsLP: List<PositionLPLocal>, unit: String): Pair<Double, Double> {
-    var totalAdaValue = 0.0
-    var totalBalance = 0.0
-
-    cachedPositionsLP.forEach { lp ->
-        if (lp.tokenA == unit || lp.tokenB == unit) {
-            totalAdaValue += lp.adaValue / 2
-            totalBalance += when (unit) {
-                lp.tokenA -> lp.tokenAAmount
-                lp.tokenB -> lp.tokenBAmount
-                else -> 0.0
-            }
-        }
+    override suspend fun addWatchlist(
+        name: String,
+        includeLPinFT: Boolean,
+        includeNFT: Boolean,
+        showLPTab: Boolean,
+        walletAddress: String?
+    ): Int {
+        return watchlistsDao.insertWatchlist(
+            WatchListConfig(
+                name = name,
+                includeNFT = includeNFT,
+                includeLPinFT = includeLPinFT,
+                showLPTab = showLPTab,
+                walletAddress = walletAddress,
+                createdAt = ZonedDateTime.now(),
+            )
+        ).toInt()
     }
 
-    return Pair(totalAdaValue, totalBalance)
+    /* override suspend fun getFTPositionsForWatchlistIncludingLP(): List<PositionFTLocal> =
+         getAllPositionsFTIncludingLP()*/
+
 }
 
 
-fun PositionsFt.toPositionFT(): PositionFTLocal {
+
+
+fun PositionsFt.toPositionFT(watchList: Int): PositionFTLocal {
     return PositionFTLocal(
         ticker = this.ticker,
         fingerprint = this.fingerprint,
@@ -202,28 +171,28 @@ fun PositionsFt.toPositionFT(): PositionFTLocal {
         balance = this.balance,
         change30D = this.change30D,
         showInFeed = false,  // Default value, adjust if needed
-        watchList = 0,  // Default value, adjust if needed
+        watchList = watchList,
         createdAt = ZonedDateTime.now(),
         lastUpdated = ZonedDateTime.now()
     )
 }
 
-fun PositionsNft.toPositionNFT(): PositionNFTLocal {
+fun PositionsNft.toPositionNFT(watchList: Int): PositionNFTLocal {
     return PositionNFTLocal(
         name = this.name,
         policy = this.policy,
         adaValue = this.adaValue,
-        price = this.floorPrice ?: 1.0, // Handle null price
+        price = this.floorPrice,
         balance = this.balance,
         change30D = this.change30D,
         showInFeed = false,  // Default value, adjust if needed
-        watchList = 0,  // Default value, adjust if needed
+        watchList = watchList,
         createdAt = ZonedDateTime.now(),
         lastUpdated = ZonedDateTime.now()
     )
 }
 
-fun PositionsLp.toPositionsLP(): PositionLPLocal {
+fun PositionsLp.toPositionsLP(watchList: Int): PositionLPLocal {
     return PositionLPLocal(
         adaValue = this.adaValue,
         amountLP = this.amountLP,
@@ -237,13 +206,13 @@ fun PositionsLp.toPositionsLP(): PositionLPLocal {
         tokenBName = this.tokenBName,
         unit = this.unit,
         showInFeed = false,  // Default value, adjust if needed
-        watchList = 0,  // Default value, adjust if needed
+        watchList = watchList,  // Default value, adjust if needed
         createdAt = ZonedDateTime.now(),
         lastUpdated = ZonedDateTime.now(),
     )
 }
 
-fun PositionLPLocal.tokenAToPositionFT(): PositionFTLocal {
+fun PositionLPLocal.tokenAToPositionFT(watchList: Int): PositionFTLocal {
     val lp = this
     return PositionFTLocal(
         ticker = lp.tokenAName,
@@ -254,12 +223,12 @@ fun PositionLPLocal.tokenAToPositionFT(): PositionFTLocal {
         balance = lp.tokenAAmount,
         change30D = 0.0,
         showInFeed = false,  // Default value, adjust if needed
-        watchList = 0,  // Default value, adjust if needed
+        watchList = watchList,
         createdAt = ZonedDateTime.now(),
         lastUpdated = ZonedDateTime.now()
     )
 }
-fun PositionLPLocal.tokenBToPositionFT(): PositionFTLocal {
+fun PositionLPLocal.tokenBToPositionFT(watchList: Int): PositionFTLocal {
     val lp = this
     return PositionFTLocal(
         ticker = lp.tokenBName,
@@ -270,7 +239,7 @@ fun PositionLPLocal.tokenBToPositionFT(): PositionFTLocal {
         balance = lp.tokenBAmount,
         change30D = 0.0,
         showInFeed = false,  // Default value, adjust if needed
-        watchList = 0,  // Default value, adjust if needed
+        watchList = watchList,  // Default value, adjust if needed
         createdAt = ZonedDateTime.now(),
         lastUpdated = ZonedDateTime.now()
     )

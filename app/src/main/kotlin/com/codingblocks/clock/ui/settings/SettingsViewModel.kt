@@ -49,7 +49,7 @@ class SettingsViewModel(
                     is Action.GetPositionsFT -> flow {
                         try {
                             emit(Mutation.ErrorChanged(null))
-                            dataRepo.getFTPositionsForWatchlist().let { emit(Mutation.PositionsFTChanged(it)) }
+                            //dataRepo.getFTPositionsForWatchlist().let { emit(Mutation.PositionsFTChanged(it)) }
                             emit(Mutation.ShowTypeChanged(ShowType.FT))
                         } catch (e: Exception) {
                             emit(Mutation.ErrorChanged("could not retrieve positions ${e.message}"))
@@ -59,8 +59,7 @@ class SettingsViewModel(
                     is Action.GetPositionsNFT -> flow {
                         try {
                             emit(Mutation.ErrorChanged(null))
-                            dataRepo.getNFTPositionsForWatchlist().let {
-                                emit(Mutation.PositionsNFTChanged(it)) }
+                            //dataRepo.getNFTPositionsForWatchlist().let { emit(Mutation.PositionsNFTChanged(it)) }
                             emit(Mutation.ShowTypeChanged(ShowType.NFT))
                         } catch (e: Exception) {
                             emit(Mutation.ErrorChanged("could not retrieve positions ${e.message}"))
@@ -70,8 +69,7 @@ class SettingsViewModel(
                     is Action.GetPositionsLP -> flow {
                         try {
                             emit(Mutation.ErrorChanged(null))
-                            dataRepo.getLPPositionsForWatchlist().let {
-                                emit(Mutation.PositionsLPChanged(it)) }
+                            // dataRepo.getLPPositionsForWatchlist().let { emit(Mutation.PositionsLPChanged(it)) }
                             emit(Mutation.ShowTypeChanged(ShowType.LP))
                         } catch (e: Exception) {
                             emit(Mutation.ErrorChanged("could not retrieve positions ${e.message}"))

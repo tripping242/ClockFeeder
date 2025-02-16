@@ -2,7 +2,9 @@ package com.codingblocks.clock.navigation
 
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AddAlert
 import androidx.compose.material.icons.outlined.List
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.codingblocks.clock.R
 import com.codingblocks.clock.navigation.destinations.ROUTE_FEEDS
@@ -20,6 +22,6 @@ enum class BottomNav(
     val icon: ImageVector,
 ) {
     WatchLists(Screen.Watchlists, Icons.Outlined.List),
-    Feeds(Screen.Feeds, Icons.Outlined.List),
-    Settings(Screen.Settings, Icons.Outlined.List),
+    Feeds(Screen.Feeds, Icons.Outlined.AddAlert),
+    Settings(Screen.Settings, Icons.Outlined.Settings),
 }

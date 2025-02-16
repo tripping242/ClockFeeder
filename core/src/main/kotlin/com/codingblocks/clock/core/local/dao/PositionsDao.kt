@@ -14,9 +14,8 @@ import java.time.ZonedDateTime
 @Dao
 interface PositionsDao {
     // FT Positions, ticker is the name, fingerprint is unique
-
-    @Query("SELECT * FROM positionFT ORDER by adaValue DESC")
-    fun getAllFTPositions() : List<PositionFTLocal>
+    @Query("SELECT * FROM positionFT WHERE watchList = :watchlistNumber ORDER by adaValue DESC")
+    fun getAllFTPositions(watchlistNumber: Int): List<PositionFTLocal>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insertFT(positionFTLocal: PositionFTLocal): Long
@@ -47,8 +46,8 @@ interface PositionsDao {
 
     // NFT Positions, name is the name, policy is unique
 
-    @Query("SELECT * FROM positionNFT ORDER by adaValue DESC")
-    fun getAllNFTPositions() : List<PositionNFTLocal>
+    @Query("SELECT * FROM positionNFT WHERE watchList = :watchlistNumber ORDER by adaValue DESC")
+    fun getAllNFTPositions(watchlistNumber: Int): List<PositionNFTLocal>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insertNFT(positionNFTLocal: PositionNFTLocal): Long
@@ -74,8 +73,8 @@ interface PositionsDao {
 
     // LP positions
 
-    @Query("SELECT * FROM positionLP ORDER by adaValue DESC")
-    fun getAllLPPositions() : List<PositionLPLocal>
+    @Query("SELECT * FROM positionLP WHERE watchList = :watchlistNumber ORDER by adaValue DESC")
+    fun getAllLPPositions(watchlistNumber: Int): List<PositionLPLocal>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insertLP(positionLPLocal: PositionLPLocal): Long
