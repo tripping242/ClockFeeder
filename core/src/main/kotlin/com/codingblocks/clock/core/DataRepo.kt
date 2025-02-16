@@ -24,11 +24,14 @@ import com.codingblocks.clock.core.local.data.PositionLPLocal
 import com.codingblocks.clock.core.local.data.PositionNFTLocal
 import com.codingblocks.clock.core.local.data.WatchListConfig
 import com.codingblocks.clock.core.local.data.WatchlistWithPositions
+import com.codingblocks.clock.core.manager.BlockFrostManager
+import com.codingblocks.clock.core.manager.BlockFrostManagerImpl
 import com.codingblocks.clock.core.manager.ClockManager
 import com.codingblocks.clock.core.manager.ClockManagerImpl
 import com.codingblocks.clock.core.manager.TapToolsManager
 import com.codingblocks.clock.core.manager.TapToolsManagerImpl
 import com.codingblocks.clock.core.model.AppBuildInfo
+import com.codingblocks.clock.core.model.blockfrost.BlockFrostConfig
 import com.codingblocks.clock.core.model.clock.StatusResponse
 import com.codingblocks.clock.core.model.taptools.PositionsFt
 import com.codingblocks.clock.core.model.taptools.PositionsLp
@@ -41,12 +44,10 @@ import java.time.ZonedDateTime
 interface DataRepo {
     val watchlistsWithPositions: List<WatchlistWithPositions>
 
-    /*val positionsFT: List<PositionFTLocal>
-    val positionsNFT: List<PositionNFTLocal>
-    val positionsLP: List<PositionLPLocal>
-    val positionsFTIncludingLP: List<PositionFTLocal>*/
     suspend fun getClockStatus() : Result<StatusResponse>
-    // wallet wit address
+    // wallet with address
+    suspend fun resolveAdaHandle(handle: String): Result<String>
+    suspend fun getStakeAddress(address: String) : Result<String>
     suspend fun loadPositionsForAddress(address: String) : Result<PositionsResponse>
     suspend fun updateOrInsertPositions(watchList: Int, positionResponse: PositionsResponse)
 
@@ -67,6 +68,7 @@ class CoreDataRepo(
 ) : DataRepo {
     private val tapToolsManager: TapToolsManager = provideTapToolsManager()
     private val clockManager: ClockManager = provideClockManager()
+    private val blockFrostManager: BlockFrostManager = provideBlockFrostManager()
     private val positionsDao = database.getPositionsDao()
     private val watchlistsDao = database.getWatchListsDao()
 
@@ -84,6 +86,13 @@ class CoreDataRepo(
             ).build()
     }
 
+    private fun provideBlockFrostManager(): BlockFrostManager {
+        return BlockFrostManagerImpl.Builder(
+            context, BlockFrostConfig(appBuildInfo.blockFrostBaseUrl)
+        ).setOkHttpClient(okHttpClient).build()
+    }
+
+
     override val watchlistsWithPositions: List<WatchlistWithPositions>
         get() = database.getWatchListsDao().getWatchlistsWithPositions()
 
@@ -97,6 +106,11 @@ class CoreDataRepo(
         get() = getAllPositionsFTIncludingLP()*/
 
     override suspend fun getClockStatus(): Result<StatusResponse> = clockManager.getStatus()
+    override suspend fun resolveAdaHandle(handle: String): Result<String> =
+        blockFrostManager.resolveAdaHandle(handle)
+
+    override suspend fun getStakeAddress(address: String): Result<String> =
+        blockFrostManager.getStakeAddress(address)
 
     override suspend fun loadPositionsForAddress(address: String): Result<PositionsResponse> =
         tapToolsManager.getPositionsForAddress(address)

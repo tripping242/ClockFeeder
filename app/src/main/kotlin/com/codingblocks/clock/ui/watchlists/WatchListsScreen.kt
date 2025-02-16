@@ -65,8 +65,8 @@ fun WatchlistsScreen(
                     ExpandableCard(topContent = {
                         val config = currentWatchListWithPositions.watchListConfig
                         val sizeFT = currentWatchListWithPositions.positionsFT.size
-                        val sizeNFT = currentWatchListWithPositions.positionsFT.size
-                        val sizeLP = currentWatchListWithPositions.positionsFT.size
+                        val sizeNFT = currentWatchListWithPositions.positionsNFT.size
+                        val sizeLP = currentWatchListWithPositions.positionsLP.size
                         val sizeFTLP = currentWatchListWithPositions.positionsFTIncludingLP.size
 
                         Column(
@@ -87,6 +87,7 @@ fun WatchlistsScreen(
                                     Text(text = "#FT = $sizeFT")
                                     Text(text = "#NFT = $sizeNFT")
                                     Text(text = "#LP = $sizeLP")
+                                    Text(text = "#FT&LP = $sizeFTLP")
                                 }
 
                             }

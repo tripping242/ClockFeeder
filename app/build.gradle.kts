@@ -57,11 +57,13 @@ android {
             resValue("string", "app_name", "${Config.appName} Dev")
             resValue("string", "leak_canary_display_activity_label", "${Config.appName} Leaks")
             buildConfigField("String", "TAPTOOLS_BASE_URL", "\"https://openapi.taptools.io/api/v1/\"")
+            buildConfigField("String", "BLOCKFROST_BASE_URL", "\"https://cardano-mainnet.blockfrost.io/api/v0/\"")
             dimension = "main"
         }
         create("prod") {
             resValue("string", "app_name", Config.appName)
             buildConfigField("String", "TAPTOOLS_BASE_URL", "\"https://openapi.taptools.io/api/v1/\"")
+            buildConfigField("String", "BLOCKFROST_BASE_URL", "\"https://cardano-mainnet.blockfrost.io/api/v0/\"")
             dimension = "main"
         }
     }

@@ -24,4 +24,5 @@ data class AppBuildInfo(
     val versionCode: Int,
     val versionName: String,
     val tapToolsBaseUrl: String,
+    val blockFrostBaseUrl: String,
 )
