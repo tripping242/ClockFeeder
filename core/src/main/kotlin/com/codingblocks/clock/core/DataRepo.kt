@@ -56,11 +56,7 @@ interface DataRepo {
     // watchlist with contents
     suspend fun addWatchlist(name: String, includeLPinFT: Boolean, includeNFT: Boolean, showLPTab: Boolean, walletAddress: String?) : Int
     suspend fun findWatchlistWithAddressOrName(address: String?, name: String): WatchListConfig?
-    // todo to refresh, like reload watchlists we mmight still need a call refreshPositionsForWatchlist
-    /*suspend fun getFTPositionsForWatchlist() : List<PositionFTLocal>
-    suspend fun getNFTPositionsForWatchlist() : List<PositionNFTLocal>
-    suspend fun getLPPositionsForWatchlist() : List<PositionLPLocal>
-    suspend fun getFTPositionsForWatchlistIncludingLP() : List<PositionFTLocal>*/
+    suspend fun updateWatchlistSettings(watchListConfig: WatchListConfig)
 }
 
 class CoreDataRepo(
@@ -180,8 +176,9 @@ class CoreDataRepo(
         }
     }
 
-    /* override suspend fun getFTPositionsForWatchlistIncludingLP(): List<PositionFTLocal> =
-         getAllPositionsFTIncludingLP()*/
+    override suspend fun updateWatchlistSettings(watchListConfig: WatchListConfig, ) {
+        watchlistsDao.updateWatchListSettingsDb(watchListConfig)
+    }
 
 }
 

@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Transaction
+import androidx.room.Update
 import com.codingblocks.clock.core.local.data.WatchListConfig
 import com.codingblocks.clock.core.local.data.WatchlistWithPositions
 
@@ -18,7 +19,10 @@ interface WatchListsDao {
     @Query("SELECT * FROM watchListConfig ORDER BY createdAt DESC")
     fun getAllWatchlists(): List<WatchListConfig>
 
-    // merged obect with all wathlists containing there positionLists
+    @Update
+    fun updateWatchListSettingsDb(watchListConfig: WatchListConfig)
+
+    // merged obect with all watchlists containing there positionLists
     @Transaction
     @Query("SELECT * FROM watchListConfig")
     fun getWatchlistsWithPositions(): List<WatchlistWithPositions>

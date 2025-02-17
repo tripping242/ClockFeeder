@@ -32,20 +32,19 @@ class WatchListViewModel(
     sealed class Action {
         data class OnResolveClick(val address: String) : Action()
         data class AddNewWatchlist(val config: WatchListConfig) : Action()
-        data object GetPositions : Action()
         data class SelectListToShow(val showType: ShowType) : Action()
         data object GetClockStatus : Action()
+        data class SettingsChanged(val config: WatchListConfig) : Action()
+        data class ReloadPositions(val watchListNumber: Int, val walletAdress: String?) : Action()
     }
 
     sealed class Mutation {
-       /* data class PositionsFTChanged(val positions: List<PositionFTLocal>) : Mutation()
-        data class PositionsNFTChanged(val positions: List<PositionNFTLocal>) : Mutation()
-        data class PositionsLPChanged(val positions: List<PositionLPLocal>) : Mutation()
-        data class PositionsFTIncludingLP(val positions: List<PositionFTLocal>) : Mutation()*/
         data class WatchlistsWithPositionsChanged(val watchlistsWithPositions: List<WatchlistWithPositions>) : Mutation()
         data class ClockStatusChanged(val statusResponse: StatusResponse) : Mutation()
         data class ShowAddWatchlistDialogChanged(val show: Boolean) : Mutation()
         data class ErrorChanged(val errorMessage: String?) : Mutation()
+        data class ResolvedAddressChanged(val address: String) : Mutation()
+        data class ResolveErrorChanged(val errorMessage: String?) : Mutation()
         data class ErrorAddWatchListChanged(val errorMessage: String?) : Mutation()
         data class ShowTypeChanged(val showType: ShowType) : Mutation()
     }
@@ -56,9 +55,6 @@ class WatchListViewModel(
         val enteredAddress: String = "",
         val resolvedAddress: String? = null,
         val resolveError: String? = null,
-        /*val positionsNFT: List<PositionNFTLocal> = emptyList(),
-        val positionsLP: List<PositionLPLocal> = emptyList(),
-        val positionsFTIncludingLP: List<PositionFTLocal> = emptyList(),*/
         val errorAddWatchlist: String? = null,
         val showType: ShowType = ShowType.FT,
         val error: String? = null,
@@ -74,10 +70,6 @@ class WatchListViewModel(
                 // todo get async as in
                 // employee = dataRepo.myProfile.current.getOrNull().asBasicEmployee!!
                 watchlistsWithPositions = dataRepo.watchlistsWithPositions,
-                /*positionsFT = dataRepo.positionsFT,
-                positionsNFT = dataRepo.positionsNFT,
-                positionsLP = dataRepo.positionsLP,
-                positionsFTIncludingLP = dataRepo.positionsFTIncludingLP,*/
             ),
             mutator = { action ->
                 when (action) {
@@ -99,29 +91,6 @@ class WatchListViewModel(
                             }
                         }
                     }
-
-                    Action.GetPositions -> flow {
-                        // obsolete, remove when aadnewlist tested
-                        try {
-                            emit(Mutation.ErrorChanged(null))
-                            // todo on add watchlist check if on with walletDress already exists!
-                            val watchlistNumber = dataRepo.addWatchlist(
-                                "\$statti",
-                                includeNFT = true,
-                                includeLPinFT = true,
-                                showLPTab = true,
-                                walletAddress = "stake1uy368slqls4u66g0502krmyasfdke3elfh0z6qgczmylx7ce6frnl"
-                            )
-                            dataRepo.loadPositionsForAddress("stake1uy368slqls4u66g0502krmyasfdke3elfh0z6qgczmylx7ce6frnl")
-                                .onSuccess {
-                                    dataRepo.updateOrInsertPositions(watchlistNumber, it)
-                                    val updatedWatchlistsWithPositions = dataRepo.watchlistsWithPositions
-                                    emit(Mutation.WatchlistsWithPositionsChanged(updatedWatchlistsWithPositions))  }
-                                .onFailure { emit(Mutation.ErrorChanged("could not retreive Positions:\n$it")) }
-                        } catch (e: Exception) {
-                            Timber.d("could not retreive Positions $e")
-                        }
-                    }
                     is Action.AddNewWatchlist -> flow {
                         emit(Mutation.ErrorAddWatchListChanged(null))
                         val newWatchlistConfig = action.config
@@ -131,9 +100,8 @@ class WatchListViewModel(
                         if (existingWatchlistConfig != null) {
                             if (existingWatchlistConfig.walletAddress == newWatchlistConfig.walletAddress) emit(Mutation.ErrorAddWatchListChanged("You already have a watchlist with this stakeAddress: ${existingWatchlistConfig.name}"))
                             if (existingWatchlistConfig.name == newWatchlistConfig.name) emit(Mutation.ErrorAddWatchListChanged("This name is already used for one of your other watchlists"))
-                            // todo add state nameError
+                            // todo add state nameError?
                         } else {
-                            Timber.tag("wims").i("adding the new watchlist}")
                             try {
                                 emit(Mutation.ErrorChanged(null))
                                 val watchlistNumber = with (newWatchlistConfig) {
@@ -146,14 +114,10 @@ class WatchListViewModel(
                                     )
                                 }
                                 emit(Mutation.ShowAddWatchlistDialogChanged(false))
-                                Timber.tag("wims").i("       new watchlist added: $watchlistNumber}")
                                 newWatchlistConfig.walletAddress?.let { walletAddress ->
-                                    Timber.tag("wims").i("getting positions for new watchlist with $walletAddress}")
                                     dataRepo.loadPositionsForAddress(walletAddress)
                                         .onSuccess {
-                                            Timber.tag("wims").i("loading success}")
                                             dataRepo.updateOrInsertPositions(watchlistNumber, it)
-                                            Timber.tag("wims").i("inserting in db success}")
                                             val updatedWatchlistsWithPositions =
                                                 dataRepo.watchlistsWithPositions
                                             emit(
@@ -161,11 +125,8 @@ class WatchListViewModel(
                                                     updatedWatchlistsWithPositions
                                                 )
                                             )
-                                            Timber.tag("wims").i("update state with all watchlists done}")
                                         }
                                         .onFailure {
-                                            // how do we handle an added watchlist ADDED, but no positions loaded for it ? how do we recover from this?
-                                            // reload button in the card , plus maybe a warning trianlge next to it )on click show the info not loaded, lets try...
                                             emit(Mutation.ErrorChanged("could not retrieve Positions:\n$it")) }
                                 }
                             } catch (e: Exception) {
@@ -181,9 +142,36 @@ class WatchListViewModel(
                     is Action.OnResolveClick -> flow {
                         if (action.address.startsWith("$")) {
                             // resolve with handle
+                            dataRepo.resolveAdaHandle(action.address.removePrefix("$"))
+                                .onSuccess { emit(Mutation.ResolvedAddressChanged(it)) }
+                                .onFailure { emit(Mutation.ResolveErrorChanged("Could not resolve handle")) }
                         } else {
-                            // resolve with stake
+                            dataRepo.getStakeAddress(action.address)
+                                .onSuccess { emit(Mutation.ResolvedAddressChanged(it)) }
+                                .onFailure { emit(Mutation.ResolveErrorChanged("Could not find Address")) }
                         }
+                    }
+
+                    is Action.SettingsChanged -> flow {
+                        dataRepo.updateWatchlistSettings(action.config)
+                    }
+
+                    is Action.ReloadPositions -> flow {
+                        action.walletAdress?.let { walletAddress ->
+                            dataRepo.loadPositionsForAddress(walletAddress).onSuccess {
+                                    dataRepo.updateOrInsertPositions(action.watchListNumber, it)
+                                    val updatedWatchlistsWithPositions =
+                                        dataRepo.watchlistsWithPositions
+                                    emit(
+                                        Mutation.WatchlistsWithPositionsChanged(
+                                            updatedWatchlistsWithPositions
+                                        )
+                                    )
+                                }.onFailure {
+                                    emit(Mutation.ErrorChanged("could not retrieve Positions:\n$it"))
+                                }
+                        }
+
                     }
                 }
             },
@@ -199,6 +187,8 @@ class WatchListViewModel(
                     is Mutation.WatchlistsWithPositionsChanged -> previousState.copy(watchlistsWithPositions = mutation.watchlistsWithPositions)
                     is Mutation.ErrorAddWatchListChanged -> previousState.copy(errorAddWatchlist = mutation.errorMessage)
                     is Mutation.ShowAddWatchlistDialogChanged -> previousState.copy(showAddWatchListDialog = mutation.show)
+                    is Mutation.ResolveErrorChanged -> previousState.copy(resolveError = mutation.errorMessage)
+                    is Mutation.ResolvedAddressChanged -> previousState.copy(resolvedAddress = mutation.address)
                 }
             }
         )

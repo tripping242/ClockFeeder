@@ -7,8 +7,6 @@ import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
 
-private const val apiKey = "mainnetYpTwo16JgFrAzAqsDRt7I4PqRxGTR1bs"
-
 interface BlockFrostApi {
     @GET("assets/{assetHexed}/addresses")
     suspend fun getAdaHandleAddresses(

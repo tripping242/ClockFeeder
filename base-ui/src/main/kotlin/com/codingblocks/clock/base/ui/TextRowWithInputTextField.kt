@@ -2,9 +2,11 @@ package com.codingblocks.clock.base.ui
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Checkbox
 import androidx.compose.material.Text
@@ -30,15 +32,21 @@ fun TextRowWithIntegerInputTextField(
     var isError by remember { mutableStateOf(false) }
     Row(
         modifier = modifier
+            .padding(16.dp)
             .fillMaxWidth(),
         horizontalArrangement = Arrangement.Start,
     ) {
         Text(
             text = text,
+            maxLines = 4,
             modifier = Modifier
-                .padding(end = 8.dp),
+                .padding(end = 8.dp)
+                .weight(0.5f),
         )
         TextField(
+            modifier = Modifier
+                .padding(end = 8.dp)
+                .weight(0.5f),
             enabled = enabled,
             value = if (amount != 0) amount.toString() else "",
             onValueChange = { value ->
@@ -50,7 +58,7 @@ fun TextRowWithIntegerInputTextField(
                 }
             },
             singleLine = true,
-            label = { hint?.let { Text(text = hint)}},
+            label = { hint?.let { Text(text = hint) } },
             keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
             isError = isError,
         )

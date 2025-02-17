@@ -13,5 +13,7 @@ data class WatchListConfig(
     val includeNFT: Boolean,
     val showLPTab: Boolean,
     val walletAddress: String? = null,
+    val minFTAmount: Int = 0,
+    val minNFTAmount: Int = 0,
     val createdAt: ZonedDateTime,
 )

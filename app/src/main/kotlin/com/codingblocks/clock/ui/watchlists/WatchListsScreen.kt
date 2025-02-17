@@ -7,18 +7,24 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
+import androidx.compose.material.IconButton
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -30,28 +36,35 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codingblocks.clock.R
 import com.codingblocks.clock.base.ui.CheckBoxRowWithText
 import com.codingblocks.clock.base.ui.TextRowWithIntegerInputTextField
 import com.codingblocks.clock.base.ui.card.ExpandableCard
 import com.codingblocks.clock.base.ui.dialog.FullScreenDialog
+import com.codingblocks.clock.base.ui.icon.AppIcon
 import com.codingblocks.clock.base.ui.scaffold.AppScaffold
 import com.codingblocks.clock.base.ui.theme.AppTheme
 import com.codingblocks.clock.base.ui.theme.md_theme_light_error
 import com.codingblocks.clock.base.ui.theme.md_theme_light_secondary
 import com.codingblocks.clock.base.ui.utils.formatMax8decimals
 import com.codingblocks.clock.base.ui.utils.formatToNoDecimals
-import com.codingblocks.clock.base.ui.utils.prettyPrintDataClass
 import com.codingblocks.clock.core.local.data.PositionFTLocal
 import com.codingblocks.clock.core.local.data.PositionLPLocal
 import com.codingblocks.clock.core.local.data.PositionNFTLocal
 import com.codingblocks.clock.core.local.data.WatchListConfig
+import com.codingblocks.clock.core.local.data.WatchlistWithPositions
 import com.codingblocks.clock.core.local.data.formattedHHMM
 import com.codingblocks.clock.ui.watchlists.WatchListViewModel.PositionItem
 import com.codingblocks.clock.ui.watchlists.WatchListViewModel.ShowType
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.getViewModel
 import java.time.ZonedDateTime
 
@@ -62,7 +75,9 @@ fun WatchlistsScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val parentLazyListState: LazyListState = rememberLazyListState()
     val childLazyListState = rememberLazyListState()
+    var expandedItemIndex by remember { mutableStateOf(-1) }
     var showAddWatchListDialog by remember { mutableStateOf(state.showAddWatchListDialog) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
 
     var enteredAddress by remember { mutableStateOf("") }
 
@@ -80,140 +95,29 @@ fun WatchlistsScreen(
                     .fillMaxWidth()
                     .wrapContentHeight()
             ) {
-                items(state.watchlistsWithPositions) { currentWatchListWithPositions ->
-                    // todo move to composable
-                    ExpandableCard(topContent = {
-                        val config = currentWatchListWithPositions.watchListConfig
-                        val sizeFT = currentWatchListWithPositions.positionsFT.size
-                        val sizeNFT = currentWatchListWithPositions.positionsNFT.size
-                        val sizeLP = currentWatchListWithPositions.positionsLP.size
-                        val sizeFTLP = currentWatchListWithPositions.positionsFTIncludingLP.size
-
-                        Column(
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .fillMaxWidth(),
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(
-                                    text = config.name,
-                                    style = AppTheme.typography.h6,
-                                )
-                                Column(
-                                    modifier = Modifier.padding(4.dp)
-                                ) {
-                                    Text(text = "#FT = $sizeFT")
-                                    Text(text = "#NFT = $sizeNFT")
-                                    Text(text = "#LP = $sizeLP")
-                                    Text(text = "#FT&LP = $sizeFTLP")
+                itemsIndexed(state.watchlistsWithPositions) { index, currentWatchListWithPositions ->
+                    ExpandableItem(
+                        isExpanded = expandedItemIndex == index,
+                        onClick = {
+                            if (expandedItemIndex != index) {
+                                expandedItemIndex = -1
+                                CoroutineScope(Dispatchers.Main).launch {
+                                    parentLazyListState.animateScrollToItem(index)
+                                    expandedItemIndex = index
                                 }
-
+                            } else {
+                                // Toggle off if clicked again
+                                expandedItemIndex = -1
                             }
-                        }
-
-                    }, expandedContent = {
-                        val positionItems = when (state.showType) {
-                            ShowType.FT -> currentWatchListWithPositions.positionsFT.map {
-                                PositionItem.FT(
-                                    it
-                                )
-                            }
-
-                            ShowType.FT_LP -> currentWatchListWithPositions.positionsFTIncludingLP.map {
-                                PositionItem.FT(
-                                    it
-                                )
-                            }
-
-                            ShowType.NFT -> currentWatchListWithPositions.positionsNFT.map {
-                                PositionItem.NFT(
-                                    it
-                                )
-                            }
-
-                            ShowType.LP -> currentWatchListWithPositions.positionsLP.map {
-                                PositionItem.LP(
-                                    it
-                                )
-                            }
-                        }
-                        Column(
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .fillMaxWidth(),
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Button(
-                                    modifier = Modifier,
-                                    onClick = {
-                                        viewModel.dispatch(
-                                            WatchListViewModel.Action.SelectListToShow(
-                                                WatchListViewModel.ShowType.FT
-                                            )
-                                        )
-                                    },
-                                ) {
-                                    Text(text = " FT")
-                                }
-                                Button(
-                                    modifier = Modifier,
-                                    onClick = {
-                                        viewModel.dispatch(
-                                            WatchListViewModel.Action.SelectListToShow(
-                                                WatchListViewModel.ShowType.NFT
-                                            )
-                                        )
-                                    },
-                                ) {
-                                    Text(text = "NTF")
-                                }
-                                Button(
-                                    modifier = Modifier,
-                                    onClick = {
-                                        viewModel.dispatch(
-                                            WatchListViewModel.Action.SelectListToShow(
-                                                WatchListViewModel.ShowType.LP
-                                            )
-                                        )
-                                    },
-                                ) {
-                                    Text(text = " LP")
-                                }
-                                Button(
-                                    modifier = Modifier,
-                                    onClick = {
-                                        viewModel.dispatch(
-                                            WatchListViewModel.Action.SelectListToShow(
-                                                WatchListViewModel.ShowType.FT_LP
-                                            )
-                                        )
-                                    },
-                                ) {
-                                    Text(text = " FT & LP")
-                                }
-                            }
-
-                            LazyColumn(
-                                state = childLazyListState,
-                                modifier = Modifier.padding(vertical = 4.dp),
-                            ) {
-                                items(positionItems) { positionItem ->
-                                    when (positionItem) {
-                                        is PositionItem.FT -> PositionFTItem(item = positionItem.positionFT)
-                                        is PositionItem.NFT -> PositionNFTItem(item = positionItem.positionNFT)
-                                        is PositionItem.LP -> PositionLPItem(item = positionItem.positionLP)
-                                    }
-                                }
-                            }
-                        }
-                    })
+                        },
+                        onReloadPositionsClick = {
+                            with(currentWatchListWithPositions.watchListConfig) { WatchListViewModel.Action.ReloadPositions(watchlistNumber, walletAddress) }},
+                        onSettingsClick = { showSettingsDialog = true},
+                        currentWatchListWithPositions = currentWatchListWithPositions,
+                        showType = state.showType,
+                        state = childLazyListState,
+                        onSelectListToShow = { WatchListViewModel.Action.SelectListToShow(it) }
+                    )
                 }
             }
 
@@ -233,16 +137,6 @@ fun WatchlistsScreen(
             ) {
                 Text(text = "ADD WATCH LIST")
             }
-            /*Button(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { viewModel.dispatch(WatchListViewModel.Action.GetClockStatus) },
-            ) {
-                Text(text = "GET CLOCK STATUS")
-            }
-            state.status?.let {
-                Text(prettyPrintDataClass(it))
-            }*/
-
         }
     }
     if (showAddWatchListDialog) {
@@ -273,7 +167,169 @@ fun WatchlistsScreen(
             },
         )
     }
+    if (showSettingsDialog) {
+        if (expandedItemIndex in 0..state.watchlistsWithPositions.size) {
+            val watchListConfig = state.watchlistsWithPositions[expandedItemIndex].watchListConfig
+            // todo
+            SettingsDialog(
+                watchListConfig = watchListConfig,
+                onDismiss = { showSettingsDialog = false },
+                onSaveClick = { viewModel.dispatch(WatchListViewModel.Action.SettingsChanged(it) )}
+            )
+        } else {
+            Dialog(
+                onDismissRequest = { showSettingsDialog = false }
+            ) {
+                Text(text = "Something went wrong, the settings could not be loaded")
+            }
+        }
+    }
 
+}
+
+@Composable
+fun ExpandableItem(
+    isExpanded: Boolean,
+    onClick: () -> Unit,
+    onSettingsClick: () -> Unit,
+    onReloadPositionsClick: () -> Unit,
+    currentWatchListWithPositions: WatchlistWithPositions,
+    showType: ShowType,
+    state: LazyListState,
+    onSelectListToShow: (ShowType) -> Unit
+) {
+    ExpandableCard(
+        isExpanded = isExpanded,
+        onClick = onClick,
+        topContent = {
+            val config = currentWatchListWithPositions.watchListConfig
+            val sizeFT = currentWatchListWithPositions.positionsFT.size
+            val sizeNFT = currentWatchListWithPositions.positionsNFT.size
+            val sizeLP = currentWatchListWithPositions.positionsLP.size
+            val sizeFTLP = currentWatchListWithPositions.positionsFTIncludingLP.size
+
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = config.name,
+                        style = AppTheme.typography.h6,
+                    )
+                    Column(
+                        modifier = Modifier.padding(4.dp)
+                    ) {
+                        Text(text = "#FT = $sizeFT")
+                        Text(text = "#NFT = $sizeNFT")
+                        Text(text = "#LP = $sizeLP")
+                        Text(text = "#FT&LP = $sizeFTLP")
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(
+                        onClick = onSettingsClick,
+                        modifier = Modifier
+                            .padding(end = 16.dp),
+                    ) {
+                        AppIcon(icon = Icons.Outlined.Settings)
+                    }
+                    IconButton(
+                        onClick = onReloadPositionsClick,
+                        modifier = Modifier
+                            .padding(end = 16.dp),
+                    ) {
+                        AppIcon(icon = Icons.Outlined.Refresh)
+                    }
+                }
+            }
+        },
+        expandedContent = {
+            val positionItems = when (showType) {
+                ShowType.FT -> currentWatchListWithPositions.positionsFT.map {
+                    PositionItem.FT(
+                        it
+                    )
+                }
+
+                ShowType.FT_LP -> currentWatchListWithPositions.positionsFTIncludingLP.map {
+                    PositionItem.FT(
+                        it
+                    )
+                }
+
+                ShowType.NFT -> currentWatchListWithPositions.positionsNFT.map {
+                    PositionItem.NFT(
+                        it
+                    )
+                }
+
+                ShowType.LP -> currentWatchListWithPositions.positionsLP.map {
+                    PositionItem.LP(
+                        it
+                    )
+                }
+            }
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Button(
+                        modifier = Modifier,
+                        onClick = { onSelectListToShow(ShowType.FT) },
+                    ) {
+                        Text(text = " FT")
+                    }
+                    Button(
+                        modifier = Modifier,
+                        onClick = { onSelectListToShow(ShowType.NFT) },
+                    ) {
+                        Text(text = "NTF")
+                    }
+                    Button(
+                        modifier = Modifier,
+                        onClick = { onSelectListToShow(ShowType.LP) },
+                    ) {
+                        Text(text = " LP")
+                    }
+                    Button(
+                        modifier = Modifier,
+                        onClick = { onSelectListToShow(ShowType.FT_LP) },
+                    ) {
+                        Text(text = " FT & LP")
+                    }
+                }
+
+                Box(modifier = Modifier.height(600.dp)) {
+                    LazyColumn(
+                        state = state,
+                        modifier = Modifier.padding(vertical = 4.dp),
+                    ) {
+                        items(positionItems, key = { it.hashCode() }) { positionItem ->
+                            when (positionItem) {
+                                is PositionItem.FT -> PositionFTItem(item = positionItem.positionFT)
+                                is PositionItem.NFT -> PositionNFTItem(item = positionItem.positionNFT)
+                                is PositionItem.LP -> PositionLPItem(item = positionItem.positionLP)
+                            }
+                        }
+                    }
+                }
+            }
+        })
 }
 
 @Composable
@@ -330,13 +386,15 @@ fun AddWatchListDialog(
             }
         }
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
             horizontalArrangement = Arrangement.End,
         ) {
             resolvedAddress?.let {
                 Text(
                     text = "valid! StakeAddress=$it",
-                    style = AppTheme.typography.body2,
+                    style = TextStyle(fontSize = 8.sp),
                     color = md_theme_light_secondary,
                 )
             }
@@ -350,15 +408,16 @@ fun AddWatchListDialog(
         }
         Column(
             modifier = Modifier
-                //.alpha(if (resolvedAddress!=null) 0.0f else 0.5f)
+                .fillMaxWidth()
+                .alpha(if (resolvedAddress != null) 1.0f else 0.2f)
         ) {
             TextField(
                 enabled = resolvedAddress != null,
                 value = watchListName,
                 onValueChange = { watchListName = it },
                 modifier = Modifier
+                    .fillMaxWidth()
                     .padding(end = 16.dp)
-                    .weight(0.8f)
             )
             CheckBoxRowWithText(
                 enabled = resolvedAddress != null,
@@ -431,6 +490,114 @@ fun AddWatchListDialog(
         }
     }
 }
+@Composable
+fun SettingsDialog(
+    watchListConfig: WatchListConfig,
+    onDismiss: () -> Unit,
+    onSaveClick: (WatchListConfig) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var checkedStateIncludeLPInFT: Boolean by remember { mutableStateOf(watchListConfig.includeLPinFT) }
+    var checkedStateIncludeNFT: Boolean by remember { mutableStateOf(watchListConfig.includeNFT) }
+    var minFTPostionAmount: Int by remember { mutableIntStateOf(watchListConfig.minFTAmount) }
+    var minNFTPostionAmount: Int by remember { mutableIntStateOf(watchListConfig.minNFTAmount) }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+    ) {
+        Column(
+            modifier = modifier
+                //.background(Color.White)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.Start,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+
+            ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = "Watchlist name:",
+                    style = AppTheme.typography.h6,
+                )
+                Text(
+                    text = watchListConfig.name,
+                    style = AppTheme.typography.h6,
+                    maxLines = 2,
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                watchListConfig.walletAddress?.let {
+                    Text(
+                        text = it,
+                        style = TextStyle(fontSize = 8.sp),
+                        color = md_theme_light_secondary,
+                    )
+                }
+            }
+            CheckBoxRowWithText(
+                text = "Include LP in Token positions?",
+                onCheckedChanged = { checkedStateIncludeLPInFT = it },
+                checkedState = checkedStateIncludeLPInFT,
+            )
+            CheckBoxRowWithText(
+                text = "Include NFTs in this watchlist?",
+                onCheckedChanged = { checkedStateIncludeNFT = it },
+                checkedState = checkedStateIncludeNFT,
+            )
+            TextRowWithIntegerInputTextField(
+                text = "Exclude token positions with a value lower than:",
+                amount = minFTPostionAmount,
+                onAmountChanged = { newAmount ->
+                    minFTPostionAmount = newAmount
+                },
+                hint = "₳",
+            )
+            if (checkedStateIncludeNFT) {
+                TextRowWithIntegerInputTextField(
+                    text = "Exclude NFT positions with a value lower than:",
+                    amount = minNFTPostionAmount,
+                    onAmountChanged = { newAmount ->
+                        minNFTPostionAmount = newAmount
+                    },
+                    hint = "₳",
+                )
+            }
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                enabled = with (watchListConfig) {
+                        (includeNFT != checkedStateIncludeNFT ||
+                        includeLPinFT != checkedStateIncludeLPInFT ||
+                        minNFTAmount != minNFTPostionAmount ||
+                        minFTAmount != minFTPostionAmount)
+                },
+                onClick = {
+                    val config: WatchListConfig = watchListConfig.copy(
+                        includeNFT = checkedStateIncludeNFT,
+                        includeLPinFT = checkedStateIncludeLPInFT,
+                        minNFTAmount = minNFTPostionAmount,
+                        minFTAmount = minFTPostionAmount,
+                        // showLPTab = showLPTab,
+                    )
+                    onSaveClick(config)
+                    onDismiss.invoke()
+                },
+            ) {
+                Text(text = "SAVE SETTINGS")
+            }
+            Button(modifier = Modifier.fillMaxWidth(), onClick = {
+                onDismiss.invoke()
+            }) {
+                Text(text = "CANCEL")
+            }
+        }
+    }
+}
+
 @Composable
 fun PositionNFTItem(item: PositionNFTLocal) {
     Row(
