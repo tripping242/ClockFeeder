@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,6 +67,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.getViewModel
+import timber.log.Timber
 import java.time.ZonedDateTime
 
 @Composable
@@ -78,7 +80,7 @@ fun WatchlistsScreen(
     var expandedItemIndex by remember { mutableStateOf(-1) }
     var showAddWatchListDialog by remember { mutableStateOf(state.showAddWatchListDialog) }
     var showSettingsDialog by remember { mutableStateOf(false) }
-
+    val coroutineScope = rememberCoroutineScope()
     var enteredAddress by remember { mutableStateOf("") }
 
     AppScaffold(
@@ -100,9 +102,12 @@ fun WatchlistsScreen(
                         isExpanded = expandedItemIndex == index,
                         onClick = {
                             if (expandedItemIndex != index) {
-                                expandedItemIndex = -1
-                                CoroutineScope(Dispatchers.Main).launch {
+                                coroutineScope.launch {
+                                    expandedItemIndex = -1
+                                    // buggy code
+                                    Timber.tag("wims").i("before animateScrollToItem")
                                     parentLazyListState.animateScrollToItem(index)
+                                    Timber.tag("wims").i("after animateScrollToItem")
                                     expandedItemIndex = index
                                 }
                             } else {
@@ -507,7 +512,7 @@ fun SettingsDialog(
     ) {
         Column(
             modifier = modifier
-                //.background(Color.White)
+                .background(Color.White)
                 .padding(16.dp),
             horizontalAlignment = Alignment.Start,
             verticalArrangement = Arrangement.spacedBy(16.dp),
