@@ -31,6 +31,7 @@ class WatchListViewModel(
 
     sealed class Action {
         data class OnResolveClick(val address: String) : Action()
+        data class EnteredAddressChanged(val address: String) : Action()
         data class AddNewWatchlist(val config: WatchListConfig) : Action()
         data class SelectListToShow(val showType: ShowType) : Action()
         data object GetClockStatus : Action()
@@ -38,6 +39,7 @@ class WatchListViewModel(
         data class SettingsChanged(val config: WatchListConfig) : Action()
         data class ReloadPositions(val watchListNumber: Int, val walletAdress: String?) : Action()
         data class DeleteWatchList(val watchListNumber: Int) : Action()
+        data object ResetError : Action()
         data object ResetAddError : Action()
     }
 
@@ -45,12 +47,15 @@ class WatchListViewModel(
         data class WatchlistsWithPositionsChanged(val watchlistsWithPositions: List<WatchlistWithPositions>) : Mutation()
         data class ClockStatusChanged(val statusResponse: StatusResponse) : Mutation()
         data class ShowAddWatchlistDialogChanged(val show: Boolean) : Mutation()
+        data class ShowLoading(val show: Boolean) : Mutation()
+        data class ShowReloading(val watchListNumber: Int) : Mutation()
         data class ErrorChanged(val errorMessage: String?) : Mutation()
         data class ResolvedAddressChanged(val address: String?) : Mutation()
         data class ResolveErrorChanged(val errorMessage: String?) : Mutation()
         data class ErrorAddWatchListDuplicateAddress(val errorMessage: String?) : Mutation()
         data class ErrorAddWatchListDuplicateName(val errorMessage: String?) : Mutation()
         data class ShowTypeChanged(val showType: ShowType) : Mutation()
+        data class EnteredAddressChanged(val address: String) : Mutation()
     }
 
     data class State(
@@ -65,6 +70,8 @@ class WatchListViewModel(
         val showAddWatchListDialog: Boolean = false,
         val errorDuplicateAddress: Boolean = false,
         val errorDuplicateName: Boolean = false,
+        val isLoading: Boolean = false,
+        val reloadingWatchListNumber: Int = -1,
     ) {
         val currentFirstWatchListWithPositions: WatchlistWithPositions?
             get() = watchlistsWithPositions.firstOrNull()
@@ -100,6 +107,7 @@ class WatchListViewModel(
                     is Action.AddNewWatchlist -> flow {
                         emit(Mutation.ErrorAddWatchListDuplicateAddress(null))
                         emit(Mutation.ErrorAddWatchListDuplicateName(null))
+                        emit(Mutation.ErrorAddWatchListDuplicateName(null))
                         val newWatchlistConfig = action.config
                         Timber.tag("wims").i("revieved wathclist ${newWatchlistConfig}")
                         // check if name already taken or watchlist with this stakeAddress already exists
@@ -125,7 +133,10 @@ class WatchListViewModel(
                                 }
                                 Timber.tag("wims").i("added config")
                                 emit(Mutation.ShowAddWatchlistDialogChanged(false))
+                                emit(Mutation.EnteredAddressChanged(""))
+                                emit(Mutation.ResolvedAddressChanged(null))
                                 newWatchlistConfig.walletAddress?.let { walletAddress ->
+                                    emit(Mutation.ShowLoading(true))
                                     dataRepo.loadPositionsForAddress(walletAddress)
                                         .onSuccess {
                                             dataRepo.updateOrInsertPositions(watchlistNumber, it)
@@ -139,7 +150,9 @@ class WatchListViewModel(
                                         }
                                         .onFailure {
                                             emit(Mutation.ShowAddWatchlistDialogChanged(false))
-                                            emit(Mutation.ErrorChanged("could not retrieve Positions:\n$it")) }
+                                            emit(Mutation.ErrorChanged("could not retrieve Positions:\n$it"))
+                                        }
+                                    emit(Mutation.ShowLoading(false))
                                 }
                             } catch (e: Exception) {
                                 Timber.d("could not retrieve Positions $e")
@@ -152,6 +165,7 @@ class WatchListViewModel(
                     }
 
                     is Action.OnResolveClick -> flow {
+                        emit(Mutation.ResolveErrorChanged(null))
                         if (action.address.startsWith("$")) {
                             // resolve with handle
                             dataRepo.resolveAdaHandle(action.address.removePrefix("$"))
@@ -176,7 +190,9 @@ class WatchListViewModel(
                     }
 
                     is Action.ReloadPositions -> flow {
+                        // to let reload button change in crcular progress indicator
                         action.walletAdress?.let { walletAddress ->
+                            emit(Mutation.ShowReloading(action.watchListNumber))
                             dataRepo.loadPositionsForAddress(walletAddress).onSuccess {
                                     dataRepo.updateOrInsertPositions(action.watchListNumber, it)
                                     val updatedWatchlistsWithPositions =
@@ -189,6 +205,7 @@ class WatchListViewModel(
                                 }.onFailure {
                                     emit(Mutation.ErrorChanged("could not retrieve Positions:\n$it"))
                                 }
+                            emit(Mutation.ShowReloading(-1))
                         }
 
                     }
@@ -196,6 +213,7 @@ class WatchListViewModel(
                         try {
                             dataRepo.deleteWatchlist(action.watchListNumber)
                             Timber.tag("wims").i("deleted, now updating")
+                            emit(Mutation.ShowLoading(true))
                             val updatedWatchlistsWithPositions =
                                 dataRepo.watchlistsWithPositions
                             emit(
@@ -205,7 +223,12 @@ class WatchListViewModel(
                             )
                         } catch(e: Exception) {
                             Timber.d("Could not remove watchlist")
+                        } finally {
+                            emit(Mutation.ShowLoading(false))
                         }
+                    }
+                    is Action.ResetError -> flow {
+                        emit(Mutation.ErrorChanged(null))
                     }
                     is Action.ResetAddError -> flow {
                         emit(Mutation.ErrorAddWatchListDuplicateName(null))
@@ -213,6 +236,10 @@ class WatchListViewModel(
                     }
                     is Action.ShowAddWatchListDialogChanged -> flow {
                         emit(Mutation.ShowAddWatchlistDialogChanged(action.show))
+                    }
+
+                    is Action.EnteredAddressChanged -> flow {
+                        emit(Mutation.EnteredAddressChanged(action.address))
                     }
                 }
             },
@@ -234,8 +261,11 @@ class WatchListViewModel(
                         errorDuplicateAddress = mutation.errorMessage != null
                     )
                     is Mutation.ShowAddWatchlistDialogChanged -> previousState.copy(showAddWatchListDialog = mutation.show)
+                    is Mutation.ShowLoading -> previousState.copy(isLoading = mutation.show)
+                    is Mutation.ShowReloading -> previousState.copy(reloadingWatchListNumber = mutation.watchListNumber)
                     is Mutation.ResolveErrorChanged -> previousState.copy(resolveError = mutation.errorMessage)
                     is Mutation.ResolvedAddressChanged -> previousState.copy(resolvedAddress = mutation.address)
+                    is Mutation.EnteredAddressChanged -> previousState.copy(enteredAddress = mutation.address)
                 }
             }
         )

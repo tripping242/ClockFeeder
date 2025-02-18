@@ -1,8 +1,13 @@
 package com.codingblocks.clock.base.ui.card
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -35,7 +40,21 @@ fun ExpandableCard(
             .padding(8.dp)
             .clickable(onClick = onClick)
     ) {
-        SubcomposeLayout { constraints ->
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onClick),
+            ) { topContent.invoke() }
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandVertically(animationSpec = tween(durationMillis = 300)),
+                exit = shrinkVertically(animationSpec = tween(durationMillis = 200))
+            ) {
+                expandedContent.invoke()
+            }
+        }
+        /*SubcomposeLayout { constraints ->
             val mainContent = subcompose("mainContent") { topContent() }
             val mainPlaceables = mainContent.map { it.measure(constraints) }
 
@@ -57,6 +76,6 @@ fun ExpandableCard(
                     yPosition += it.height
                 }
             }
-        }
+        }*/
     }
 }

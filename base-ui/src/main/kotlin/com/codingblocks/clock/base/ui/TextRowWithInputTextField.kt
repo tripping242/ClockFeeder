@@ -51,8 +51,8 @@ fun TextRowWithIntegerInputTextField(
             value = if (amount != 0) amount.toString() else "",
             onValueChange = { value ->
                 if (value.isEmpty() || value.matches(Regex("^\\d+\$"))) {
-                    onAmountChanged(value.toInt())
                     isError = value.isNotEmpty() && value.toInt() <= 0
+                    if (!isError) onAmountChanged(value.toInt())
                 } else {
                     isError = true
                 }

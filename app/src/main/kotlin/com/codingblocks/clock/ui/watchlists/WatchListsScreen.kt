@@ -1,5 +1,6 @@
 package com.codingblocks.clock.ui.watchlists
 
+import android.os.Bundle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -8,7 +9,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.IconButton
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
@@ -64,6 +68,7 @@ import com.codingblocks.clock.core.local.data.PositionNFTLocal
 import com.codingblocks.clock.core.local.data.WatchListConfig
 import com.codingblocks.clock.core.local.data.WatchlistWithPositions
 import com.codingblocks.clock.core.local.data.formattedHHMM
+import com.codingblocks.clock.core.local.data.getAllPositionsFTIncludingLP
 import com.codingblocks.clock.ui.watchlists.WatchListViewModel.PositionItem
 import com.codingblocks.clock.ui.watchlists.WatchListViewModel.ShowType
 import kotlinx.coroutines.launch
@@ -80,7 +85,6 @@ fun WatchlistsScreen(
     val childLazyListState = rememberLazyListState()
     var expandedItemIndex by remember { mutableStateOf(-1) }
     val coroutineScope = rememberCoroutineScope()
-    var enteredAddress by remember { mutableStateOf("") }
 
     AppScaffold(
         title = stringResource(id = R.string.screen_watchlists),
@@ -96,10 +100,17 @@ fun WatchlistsScreen(
                     .fillMaxWidth()
                     .wrapContentHeight()
             ) {
-                itemsIndexed(state.watchlistsWithPositions) { index, currentWatchListWithPositions ->
+                itemsIndexed(
+                    items = state.watchlistsWithPositions,
+                    key = { index, item -> "${item.watchListConfig.watchlistNumber}-${item.watchListConfig.includeLPinFT}-${item.watchListConfig.includeLPinFT}" }
+                ) { index, item ->
                     ExpandableItem(
+                        isReloading = state.reloadingWatchListNumber == item.watchListConfig.watchlistNumber,
                         isExpanded = expandedItemIndex == index,
                         onClick = {
+                            if (state.error != null) {
+                                viewModel.dispatch(WatchListViewModel.Action.ResetError)
+                            }
                             if (expandedItemIndex != index) {
                                 coroutineScope.launch {
                                     expandedItemIndex = -1
@@ -113,13 +124,17 @@ fun WatchlistsScreen(
                             }
                         },
                         onSaveClick = { config ->
+                            // also reload showFTwithLp to update expanded part
                             viewModel.dispatch(WatchListViewModel.Action.SettingsChanged(config)) },
                         onReloadPositionsClick = { config ->
+                            if (state.error != null) {
+                                viewModel.dispatch(WatchListViewModel.Action.ResetError)
+                            }
                             viewModel.dispatch(WatchListViewModel.Action.ReloadPositions(config.watchlistNumber, config.walletAddress)) },
                         onConfirmDeleteClick = {
                             viewModel.dispatch(WatchListViewModel.Action.DeleteWatchList(it))
                         },
-                        currentWatchListWithPositions = currentWatchListWithPositions,
+                        currentWatchListWithPositions = item,
                         state = childLazyListState,
                     )
                 }
@@ -132,13 +147,25 @@ fun WatchlistsScreen(
                 )
             }
             // todo move to FAB
-            Button(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = {
-                    viewModel.dispatch(WatchListViewModel.Action.ShowAddWatchListDialogChanged(true))
+            if (state.isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .padding(vertical = 32.dp)
+                        .size(56.dp)
+                )
+            } else {
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        viewModel.dispatch(
+                            WatchListViewModel.Action.ShowAddWatchListDialogChanged(
+                                true
+                            )
+                        )
+                    }
+                ) {
+                    Text(text = "ADD NEW WATCH LIST")
                 }
-            ) {
-                Text(text = "ADD NEW WATCH LIST")
             }
         }
     }
@@ -152,14 +179,14 @@ fun WatchlistsScreen(
                     onAddClick = {
                         viewModel.dispatch(WatchListViewModel.Action.AddNewWatchlist(it))
                     },
-                    address = enteredAddress,
+                    address = state.enteredAddress,
                     onAddressChange = {
-                        enteredAddress = it
+                        viewModel.dispatch(WatchListViewModel.Action.EnteredAddressChanged(it))
                     },
                     onResolveClick = {
                         viewModel.dispatch(
                             WatchListViewModel.Action.OnResolveClick(
-                                enteredAddress
+                                state.enteredAddress
                             )
                         )
                     },
@@ -177,6 +204,7 @@ fun WatchlistsScreen(
 
 @Composable
 fun ExpandableItem(
+    isReloading: Boolean,
     isExpanded: Boolean,
     onClick: () -> Unit,
     onSaveClick: (WatchListConfig) -> Unit,
@@ -274,7 +302,8 @@ fun ExpandableItem(
                                 onClick = { onReloadPositionsClick(config) },
                                 modifier = Modifier.padding(end = 16.dp),
                             ) {
-                                AppIcon(icon = Icons.Outlined.Refresh)
+                                if (isReloading) CircularProgressIndicator(modifier = Modifier.size(8.dp))
+                                else AppIcon(icon = Icons.Outlined.Refresh)
                             }
                             IconButton(
                                 onClick = {
@@ -295,39 +324,13 @@ fun ExpandableItem(
                         Text(text = "#FT = $sizeFT")
                         Text(text = "#NFT = $sizeNFT")
                         Text(text = "#LP = $sizeLP")
-                        Text(text = "#FT&LP = $sizeFTLP")
                     }
                 }
             }
         },
         expandedContent = {
-            val minNFTAmount = currentWatchListWithPositions.watchListConfig.minNFTAmount
-            val minFTAmount = currentWatchListWithPositions.watchListConfig.minFTAmount
-            val positionItems = when (showType) {
-                ShowType.FT -> currentWatchListWithPositions.positionsFT.map {
-                    PositionItem.FT(
-                        it
-                    )
-                }.filter { it.positionFT.adaValue >= minFTAmount }
+            var positionItems = getPositionItems(showType, currentWatchListWithPositions)
 
-                ShowType.FT_LP -> currentWatchListWithPositions.positionsFTIncludingLP.map {
-                    PositionItem.FT(
-                        it
-                    )
-                }.filter { it.positionFT.adaValue >= minFTAmount }
-
-                ShowType.NFT -> currentWatchListWithPositions.positionsNFT.map {
-                    PositionItem.NFT(
-                        it
-                    )
-                }.filter { it.positionNFT.adaValue >= minNFTAmount }
-
-                ShowType.LP -> currentWatchListWithPositions.positionsLP.map {
-                    PositionItem.LP(
-                        it
-                    )
-                }
-            }
             Column(
                 modifier = Modifier
                     .padding(16.dp)
@@ -339,37 +342,44 @@ fun ExpandableItem(
                 ) {
                     Button(
                         modifier = Modifier,
-                        onClick = { showType = ShowType.FT },
+                        onClick = {
+                            showType = if (currentWatchListWithPositions.watchListConfig.includeLPinFT) ShowType.FT_LP else ShowType.FT
+                            positionItems = getPositionItems(showType, currentWatchListWithPositions)
+                        },
                     ) {
                         Text(text = " FT")
                     }
-                    Button(
-                        modifier = Modifier,
-                        onClick = { showType = ShowType.NFT },
-                    ) {
-                        Text(text = "NTF")
+                    if (currentWatchListWithPositions.watchListConfig.includeNFT) {
+                        Button(
+                            modifier = Modifier,
+                            onClick = {
+                                showType = ShowType.NFT
+                                positionItems = getPositionItems(showType, currentWatchListWithPositions)
+                            },
+
+                        ) {
+                            Text(text = "NTF")
+                        }
                     }
-                    Button(
-                        modifier = Modifier,
-                        onClick = { showType = ShowType.LP },
-                    ) {
-                        Text(text = " LP")
-                    }
-                    Button(
-                        modifier = Modifier,
-                        onClick = {
-                            Timber.tag("wims").i("click FT LP")
-                            showType = ShowType.FT_LP
-                        },
-                    ) {
-                        Text(text = " FT & LP")
+                    if (!currentWatchListWithPositions.watchListConfig.includeLPinFT) {
+                        Button(
+                            modifier = Modifier,
+                            onClick = {
+                                showType = ShowType.LP
+                                positionItems = getPositionItems(showType, currentWatchListWithPositions)
+                            },
+                        ) {
+                            Text(text = " LP")
+                        }
                     }
                 }
 
-                Box(modifier = Modifier.height(600.dp)) {
+                //Box(modifier = Modifier) {
                     LazyColumn(
                         state = state,
-                        modifier = Modifier.padding(vertical = 4.dp),
+                        modifier = Modifier
+                            .heightIn(max = 600.dp)
+                            .padding(vertical = 4.dp),
                     ) {
                         items(positionItems, key = { it.hashCode() }) { positionItem ->
                             when (positionItem) {
@@ -379,9 +389,38 @@ fun ExpandableItem(
                             }
                         }
                     }
-                }
+                //}
             }
         })
+}
+
+fun getPositionItems(showType: ShowType, currentWatchListWithPositions: WatchlistWithPositions): List<PositionItem> {
+    val aggregatedShowType = if (showType == ShowType.FT && currentWatchListWithPositions.watchListConfig.includeLPinFT) ShowType.FT_LP else ShowType.FT
+    return when (aggregatedShowType) {
+        ShowType.FT -> {
+            currentWatchListWithPositions.positionsFT
+                .map { PositionItem.FT(it) }
+                .filter { it.positionFT.adaValue >= currentWatchListWithPositions.watchListConfig.minFTAmount }
+        }
+
+        ShowType.FT_LP -> currentWatchListWithPositions.positionsFTIncludingLP.map {
+            PositionItem.FT(
+                it
+            )
+        }.filter { it.positionFT.adaValue >= currentWatchListWithPositions.watchListConfig.minFTAmount }
+
+        ShowType.NFT -> currentWatchListWithPositions.positionsNFT.map {
+            PositionItem.NFT(
+                it
+            )
+        }.filter { it.positionNFT.adaValue >= currentWatchListWithPositions.watchListConfig.minNFTAmount }
+
+        ShowType.LP -> currentWatchListWithPositions.positionsLP.map {
+            PositionItem.LP(
+                it
+            )
+        }
+    }
 }
 
 @Composable
