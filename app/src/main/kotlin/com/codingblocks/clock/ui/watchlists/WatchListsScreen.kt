@@ -33,6 +33,7 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -86,6 +87,10 @@ fun WatchlistsScreen(
     var expandedItemIndex by remember { mutableStateOf(-1) }
     val coroutineScope = rememberCoroutineScope()
 
+    LaunchedEffect(expandedItemIndex) {
+        if (expandedItemIndex != -1) parentLazyListState.animateScrollToItem(expandedItemIndex) // Smooth scroll to the item
+    }
+
     AppScaffold(
         title = stringResource(id = R.string.screen_watchlists),
     ) {
@@ -112,12 +117,7 @@ fun WatchlistsScreen(
                                 viewModel.dispatch(WatchListViewModel.Action.ResetError)
                             }
                             if (expandedItemIndex != index) {
-                                coroutineScope.launch {
-                                    expandedItemIndex = -1
-                                    // buggy code
-                                    parentLazyListState.animateScrollToItem(index)
-                                    expandedItemIndex = index
-                                }
+                                expandedItemIndex = index
                             } else {
                                 // Toggle off if clicked again
                                 expandedItemIndex = -1
@@ -344,7 +344,6 @@ fun ExpandableItem(
                         modifier = Modifier,
                         onClick = {
                             showType = if (currentWatchListWithPositions.watchListConfig.includeLPinFT) ShowType.FT_LP else ShowType.FT
-                            positionItems = getPositionItems(showType, currentWatchListWithPositions)
                         },
                     ) {
                         Text(text = " FT")
@@ -354,7 +353,6 @@ fun ExpandableItem(
                             modifier = Modifier,
                             onClick = {
                                 showType = ShowType.NFT
-                                positionItems = getPositionItems(showType, currentWatchListWithPositions)
                             },
 
                         ) {
@@ -366,7 +364,6 @@ fun ExpandableItem(
                             modifier = Modifier,
                             onClick = {
                                 showType = ShowType.LP
-                                positionItems = getPositionItems(showType, currentWatchListWithPositions)
                             },
                         ) {
                             Text(text = " LP")
@@ -381,7 +378,8 @@ fun ExpandableItem(
                             .heightIn(max = 600.dp)
                             .padding(vertical = 4.dp),
                     ) {
-                        items(positionItems, key = { it.hashCode() }) { positionItem ->
+                        val items = getPositionItems(showType, currentWatchListWithPositions)
+                        items(items, key = { it.hashCode() }) { positionItem ->
                             when (positionItem) {
                                 is PositionItem.FT -> PositionFTItem(item = positionItem.positionFT)
                                 is PositionItem.NFT -> PositionNFTItem(item = positionItem.positionNFT)
@@ -395,7 +393,7 @@ fun ExpandableItem(
 }
 
 fun getPositionItems(showType: ShowType, currentWatchListWithPositions: WatchlistWithPositions): List<PositionItem> {
-    val aggregatedShowType = if (showType == ShowType.FT && currentWatchListWithPositions.watchListConfig.includeLPinFT) ShowType.FT_LP else ShowType.FT
+    val aggregatedShowType = if (showType == ShowType.FT && currentWatchListWithPositions.watchListConfig.includeLPinFT) ShowType.FT_LP else showType
     return when (aggregatedShowType) {
         ShowType.FT -> {
             currentWatchListWithPositions.positionsFT
