@@ -52,6 +52,7 @@ interface DataRepo {
     suspend fun getStakeAddress(address: String) : Result<String>
     suspend fun loadPositionsForAddress(address: String) : Result<PositionsResponse>
     suspend fun updateOrInsertPositions(watchList: Int, positionResponse: PositionsResponse)
+    suspend fun deleteWatchlist(watchList: Int)
 
     // watchlist with contents
     suspend fun addWatchlist(name: String, includeLPinFT: Boolean, includeNFT: Boolean, showLPTab: Boolean, walletAddress: String?) : Int
@@ -145,6 +146,10 @@ class CoreDataRepo(
                 watchList
             )
         })
+    }
+
+    override suspend fun deleteWatchlist(watchList: Int) {
+        watchlistsDao.deleteWatchlistById(watchList)
     }
 
     override suspend fun addWatchlist(

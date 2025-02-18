@@ -32,15 +32,9 @@ fun ExpandableCard(
         elevation = 8.dp,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(8.dp)
             .clickable(onClick = onClick)
     ) {
-        /*Column {
-            topContent.invoke(this)
-            if (expanded) {
-                expandedContent.invoke(this)
-            }
-        }*/
         SubcomposeLayout { constraints ->
             val mainContent = subcompose("mainContent") { topContent() }
             val mainPlaceables = mainContent.map { it.measure(constraints) }

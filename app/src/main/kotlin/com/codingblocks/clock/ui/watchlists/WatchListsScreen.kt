@@ -18,11 +18,14 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
 import androidx.compose.material.IconButton
 import androidx.compose.material.Text
+import androidx.compose.material.TextButton
 import androidx.compose.material.TextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.runtime.Composable
@@ -63,8 +66,6 @@ import com.codingblocks.clock.core.local.data.WatchlistWithPositions
 import com.codingblocks.clock.core.local.data.formattedHHMM
 import com.codingblocks.clock.ui.watchlists.WatchListViewModel.PositionItem
 import com.codingblocks.clock.ui.watchlists.WatchListViewModel.ShowType
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.getViewModel
 import timber.log.Timber
@@ -78,8 +79,6 @@ fun WatchlistsScreen(
     val parentLazyListState: LazyListState = rememberLazyListState()
     val childLazyListState = rememberLazyListState()
     var expandedItemIndex by remember { mutableStateOf(-1) }
-    var showAddWatchListDialog by remember { mutableStateOf(state.showAddWatchListDialog) }
-    var showSettingsDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     var enteredAddress by remember { mutableStateOf("") }
 
@@ -88,7 +87,7 @@ fun WatchlistsScreen(
     ) {
         Column(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(8.dp)
                 .fillMaxSize(),
         ) {
             LazyColumn(
@@ -105,9 +104,7 @@ fun WatchlistsScreen(
                                 coroutineScope.launch {
                                     expandedItemIndex = -1
                                     // buggy code
-                                    Timber.tag("wims").i("before animateScrollToItem")
                                     parentLazyListState.animateScrollToItem(index)
-                                    Timber.tag("wims").i("after animateScrollToItem")
                                     expandedItemIndex = index
                                 }
                             } else {
@@ -115,13 +112,15 @@ fun WatchlistsScreen(
                                 expandedItemIndex = -1
                             }
                         },
-                        onReloadPositionsClick = {
-                            with(currentWatchListWithPositions.watchListConfig) { WatchListViewModel.Action.ReloadPositions(watchlistNumber, walletAddress) }},
-                        onSettingsClick = { showSettingsDialog = true},
+                        onSaveClick = { config ->
+                            viewModel.dispatch(WatchListViewModel.Action.SettingsChanged(config)) },
+                        onReloadPositionsClick = { config ->
+                            viewModel.dispatch(WatchListViewModel.Action.ReloadPositions(config.watchlistNumber, config.walletAddress)) },
+                        onConfirmDeleteClick = {
+                            viewModel.dispatch(WatchListViewModel.Action.DeleteWatchList(it))
+                        },
                         currentWatchListWithPositions = currentWatchListWithPositions,
-                        showType = state.showType,
                         state = childLazyListState,
-                        onSelectListToShow = { WatchListViewModel.Action.SelectListToShow(it) }
                     )
                 }
             }
@@ -136,21 +135,20 @@ fun WatchlistsScreen(
             Button(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
-                    // not sure if passing it in remember with state and than chaning locally is good...
-                    showAddWatchListDialog = true
+                    viewModel.dispatch(WatchListViewModel.Action.ShowAddWatchListDialogChanged(true))
                 }
             ) {
-                Text(text = "ADD WATCH LIST")
+                Text(text = "ADD NEW WATCH LIST")
             }
         }
     }
-    if (showAddWatchListDialog) {
+    if (state.showAddWatchListDialog) {
         FullScreenDialog(
             modifier = Modifier,
-            onDismissRequest = { showAddWatchListDialog = false },
+            onDismissRequest = { viewModel.dispatch(WatchListViewModel.Action.ShowAddWatchListDialogChanged(false)) },
             dialogContent = {
                 AddWatchListDialog(
-                    onDismiss = { showAddWatchListDialog = false },
+                    onDismiss = { viewModel.dispatch(WatchListViewModel.Action.ShowAddWatchListDialogChanged(false)) },
                     onAddClick = {
                         viewModel.dispatch(WatchListViewModel.Action.AddNewWatchlist(it))
                     },
@@ -167,42 +165,61 @@ fun WatchlistsScreen(
                     },
                     resolvedAddress = state.resolvedAddress,
                     resolveError = state.resolveError,
+                    duplicateAddress = state.errorDuplicateAddress,
+                    duplicateName = state.errorDuplicateName,
                     addError = state.errorAddWatchlist,
+                    onResetAddError = { viewModel.dispatch(WatchListViewModel.Action.ResetAddError)}
                 )
             },
         )
     }
-    if (showSettingsDialog) {
-        if (expandedItemIndex in 0..state.watchlistsWithPositions.size) {
-            val watchListConfig = state.watchlistsWithPositions[expandedItemIndex].watchListConfig
-            // todo
-            SettingsDialog(
-                watchListConfig = watchListConfig,
-                onDismiss = { showSettingsDialog = false },
-                onSaveClick = { viewModel.dispatch(WatchListViewModel.Action.SettingsChanged(it) )}
-            )
-        } else {
-            Dialog(
-                onDismissRequest = { showSettingsDialog = false }
-            ) {
-                Text(text = "Something went wrong, the settings could not be loaded")
-            }
-        }
-    }
-
 }
 
 @Composable
 fun ExpandableItem(
     isExpanded: Boolean,
     onClick: () -> Unit,
-    onSettingsClick: () -> Unit,
-    onReloadPositionsClick: () -> Unit,
+    onSaveClick: (WatchListConfig) -> Unit,
+    onConfirmDeleteClick: (Int) -> Unit,
+    onReloadPositionsClick: (WatchListConfig) -> Unit,
     currentWatchListWithPositions: WatchlistWithPositions,
-    showType: ShowType,
     state: LazyListState,
-    onSelectListToShow: (ShowType) -> Unit
 ) {
+
+    var showType by remember { mutableStateOf(ShowType.FT) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
+
+    if (showSettingsDialog) {
+        val watchListConfig = currentWatchListWithPositions.watchListConfig
+        SettingsDialog(
+            watchListConfig = watchListConfig,
+            onDismiss = { showSettingsDialog = false },
+            onSaveClick = { onSaveClick(it) }
+        )
+    }
+
+    if (showDeleteConfirmationDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmationDialog = false },
+            title = { Text("Are you sure?") },
+            text = { Text("All positions and alerts associated with this watchlist will also be removed!") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteConfirmationDialog = false
+                    onConfirmDeleteClick(currentWatchListWithPositions.watchListConfig.watchlistNumber)
+                }) {
+                    Text("DELETE")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmationDialog = false }) {
+                    Text("CANCEL")
+                }
+            }
+        )
+    }
+
     ExpandableCard(
         isExpanded = isExpanded,
         onClick = onClick,
@@ -215,20 +232,65 @@ fun ExpandableItem(
 
             Column(
                 modifier = Modifier
-                    .padding(16.dp)
+                    .wrapContentHeight()
+                    .padding(1.dp)
                     .fillMaxWidth(),
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .wrapContentHeight()
+                        .fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = config.name,
-                        style = AppTheme.typography.h6,
-                    )
                     Column(
-                        modifier = Modifier.padding(4.dp)
+                        horizontalAlignment = Alignment.Start,
+                        verticalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .wrapContentHeight()
+                            .weight(0.6f)
+                    ) {
+                        Text(
+                            modifier = Modifier
+                                .padding(bottom = 16.dp),
+                            text = config.name,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis,
+                            style = AppTheme.typography.h5,
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Start,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            IconButton(
+                                onClick = { showSettingsDialog = true },
+                                modifier = Modifier.padding(end = 8.dp),
+                            ) {
+                                AppIcon(icon = Icons.Outlined.Settings)
+                            }
+                            IconButton(
+                                onClick = { onReloadPositionsClick(config) },
+                                modifier = Modifier.padding(end = 16.dp),
+                            ) {
+                                AppIcon(icon = Icons.Outlined.Refresh)
+                            }
+                            IconButton(
+                                onClick = {
+                                    showDeleteConfirmationDialog = true
+                                },
+                                modifier = Modifier,
+                            ) {
+                                AppIcon(icon = Icons.Outlined.Delete)
+                            }
+                        }
+                    }
+                    Column(
+                        modifier = Modifier
+                            .wrapContentHeight()
+                            .padding(4.dp)
+                            .weight(0.4f)
                     ) {
                         Text(text = "#FT = $sizeFT")
                         Text(text = "#NFT = $sizeNFT")
@@ -236,47 +298,29 @@ fun ExpandableItem(
                         Text(text = "#FT&LP = $sizeFTLP")
                     }
                 }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    IconButton(
-                        onClick = onSettingsClick,
-                        modifier = Modifier
-                            .padding(end = 16.dp),
-                    ) {
-                        AppIcon(icon = Icons.Outlined.Settings)
-                    }
-                    IconButton(
-                        onClick = onReloadPositionsClick,
-                        modifier = Modifier
-                            .padding(end = 16.dp),
-                    ) {
-                        AppIcon(icon = Icons.Outlined.Refresh)
-                    }
-                }
             }
         },
         expandedContent = {
+            val minNFTAmount = currentWatchListWithPositions.watchListConfig.minNFTAmount
+            val minFTAmount = currentWatchListWithPositions.watchListConfig.minFTAmount
             val positionItems = when (showType) {
                 ShowType.FT -> currentWatchListWithPositions.positionsFT.map {
                     PositionItem.FT(
                         it
                     )
-                }
+                }.filter { it.positionFT.adaValue >= minFTAmount }
 
                 ShowType.FT_LP -> currentWatchListWithPositions.positionsFTIncludingLP.map {
                     PositionItem.FT(
                         it
                     )
-                }
+                }.filter { it.positionFT.adaValue >= minFTAmount }
 
                 ShowType.NFT -> currentWatchListWithPositions.positionsNFT.map {
                     PositionItem.NFT(
                         it
                     )
-                }
+                }.filter { it.positionNFT.adaValue >= minNFTAmount }
 
                 ShowType.LP -> currentWatchListWithPositions.positionsLP.map {
                     PositionItem.LP(
@@ -295,25 +339,28 @@ fun ExpandableItem(
                 ) {
                     Button(
                         modifier = Modifier,
-                        onClick = { onSelectListToShow(ShowType.FT) },
+                        onClick = { showType = ShowType.FT },
                     ) {
                         Text(text = " FT")
                     }
                     Button(
                         modifier = Modifier,
-                        onClick = { onSelectListToShow(ShowType.NFT) },
+                        onClick = { showType = ShowType.NFT },
                     ) {
                         Text(text = "NTF")
                     }
                     Button(
                         modifier = Modifier,
-                        onClick = { onSelectListToShow(ShowType.LP) },
+                        onClick = { showType = ShowType.LP },
                     ) {
                         Text(text = " LP")
                     }
                     Button(
                         modifier = Modifier,
-                        onClick = { onSelectListToShow(ShowType.FT_LP) },
+                        onClick = {
+                            Timber.tag("wims").i("click FT LP")
+                            showType = ShowType.FT_LP
+                        },
                     ) {
                         Text(text = " FT & LP")
                     }
@@ -340,6 +387,8 @@ fun ExpandableItem(
 @Composable
 fun AddWatchListDialog(
     address: String,
+    duplicateAddress: Boolean,
+    duplicateName: Boolean,
     addError: String?,
     resolvedAddress: String?,
     resolveError: String?,
@@ -347,6 +396,7 @@ fun AddWatchListDialog(
     onResolveClick: () -> Unit,
     onDismiss: () -> Unit,
     onAddClick: (WatchListConfig) -> Unit,
+    onResetAddError: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var watchListName by remember { mutableStateOf("") }
@@ -366,6 +416,8 @@ fun AddWatchListDialog(
         verticalArrangement = Arrangement.spacedBy(16.dp),
 
     ) {
+        Timber.tag("wims").i("duplicateAddress $duplicateAddress, duplicateName $duplicateName, addError: $addError  ")
+
         Text(
             text = "Add new Watchlist from wallet:",
             style = AppTheme.typography.h4,
@@ -375,8 +427,12 @@ fun AddWatchListDialog(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             TextField(
+                isError = duplicateAddress,
                 value = address,
-                onValueChange = onAddressChange,
+                onValueChange = {
+                    onAddressChange(it)
+                    if (duplicateAddress) onResetAddError.invoke()
+                },
                 modifier = Modifier
                     .padding(end = 16.dp)
                     .weight(0.3f)
@@ -393,6 +449,7 @@ fun AddWatchListDialog(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .wrapContentHeight()
                 .padding(bottom = 16.dp),
             horizontalArrangement = Arrangement.End,
         ) {
@@ -403,6 +460,7 @@ fun AddWatchListDialog(
                     color = md_theme_light_secondary,
                 )
             }
+            // todo we could map stakeaddress already in use error on resolving!
             resolveError?.let {
                 Text(
                     text = it,
@@ -417,9 +475,13 @@ fun AddWatchListDialog(
                 .alpha(if (resolvedAddress != null) 1.0f else 0.2f)
         ) {
             TextField(
+                isError = duplicateName,
                 enabled = resolvedAddress != null,
                 value = watchListName,
-                onValueChange = { watchListName = it },
+                onValueChange = {
+                    watchListName = it
+                    if (duplicateName) onResetAddError.invoke()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(end = 16.dp)
@@ -472,18 +534,16 @@ fun AddWatchListDialog(
                     createdAt = ZonedDateTime.now(),
                 )
                 onAddClick(config)
-                onDismiss.invoke()
             },
         ) {
             Text(text = "ADD WATCH LIST")
         }
         addError?.let {
-            // would be nice if it is a name error to error the name TextField...
-                Text(
-                    text = it,
-                    style = AppTheme.typography.body2,
-                    color = md_theme_light_error,
-                )
+            Text(
+                text = it,
+                style = AppTheme.typography.body2,
+                color = md_theme_light_error,
+            )
         }
         Button(
             modifier = Modifier.fillMaxWidth(),
@@ -533,7 +593,9 @@ fun SettingsDialog(
                 )
             }
             Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
                 horizontalArrangement = Arrangement.End,
             ) {
                 watchListConfig.walletAddress?.let {
