@@ -20,23 +20,39 @@ package com.codingblocks.clock.core.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import com.codingblocks.clock.core.local.dao.CustomFTAlertDao
+import com.codingblocks.clock.core.local.dao.CustomNFTAlertDao
+import com.codingblocks.clock.core.local.dao.FeedFTDao
+import com.codingblocks.clock.core.local.dao.FeedNFTDao
 import com.codingblocks.clock.core.local.dao.PositionsDao
 import com.codingblocks.clock.core.local.dao.WatchListsDao
+import com.codingblocks.clock.core.local.data.CustomFTAlert
+import com.codingblocks.clock.core.local.data.CustomNFTAlert
+import com.codingblocks.clock.core.local.data.FeedFT
+import com.codingblocks.clock.core.local.data.FeedNFT
 import com.codingblocks.clock.core.local.data.PositionFTLocal
 import com.codingblocks.clock.core.local.data.PositionLPLocal
 import com.codingblocks.clock.core.local.data.PositionNFTLocal
 import com.codingblocks.clock.core.local.data.WatchListConfig
 
 
-@Database(entities = [PositionFTLocal::class, PositionNFTLocal::class, PositionLPLocal::class, WatchListConfig::class], version = 2, exportSchema = false)
+@Database(
+    entities = [PositionFTLocal::class, PositionNFTLocal::class, PositionLPLocal::class, WatchListConfig::class, FeedFT:: class, FeedNFT::class, CustomFTAlert::class, CustomNFTAlert::class],
+    version = 4,
+    exportSchema = false
+)
 @TypeConverters(ZonedDateTimeConverter::class)
 abstract class AppDatabase : RoomDatabase() {
     companion object {
         const val NAME = "TapTools_DB"
     }
 
-    abstract fun getPositionsDao() : PositionsDao
-    abstract fun getWatchListsDao() : WatchListsDao
+    abstract fun getPositionsDao(): PositionsDao
+    abstract fun getWatchListsDao(): WatchListsDao
+    abstract fun getFeedFTEntriesDao(): FeedFTDao
+    abstract fun getFeedNFTEntriesDao(): FeedNFTDao
+    abstract fun getFTAlertsDao(): CustomFTAlertDao
+    abstract fun getNFTAlertsDao(): CustomNFTAlertDao
 }
 
 

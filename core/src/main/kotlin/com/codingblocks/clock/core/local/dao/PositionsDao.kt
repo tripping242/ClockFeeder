@@ -9,6 +9,7 @@ import androidx.room.Transaction
 import androidx.room.Update
 import com.codingblocks.clock.core.local.data.PositionLPLocal
 import com.codingblocks.clock.core.local.data.PositionNFTLocal
+import timber.log.Timber
 import java.time.ZonedDateTime
 
 @Dao
@@ -16,6 +17,9 @@ interface PositionsDao {
     // FT Positions, ticker is the name, fingerprint is unique
     @Query("SELECT * FROM positionFT WHERE watchList = :watchlistNumber ORDER by adaValue DESC")
     fun getAllFTPositions(watchlistNumber: Int): List<PositionFTLocal>
+
+    @Query("SELECT * FROM positionFT WHERE unit = :unit AND watchList = :watchList")
+    fun getFTPositionByUnit(unit: String, watchList: Int): PositionFTLocal?
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insertFT(positionFTLocal: PositionFTLocal): Long
@@ -31,6 +35,7 @@ interface PositionsDao {
                 positionFTLocal.balance,
                 positionFTLocal.change30D,
                 positionFTLocal.lastUpdated,
+                positionFTLocal.showInFeed,
             )
         }
     }
@@ -41,13 +46,16 @@ interface PositionsDao {
             insertOrUpdateFT(it) }
     }
 
-    @Query("UPDATE positionFT SET adaValue = :adaValue, price = :price, balance = :balance, change30D = :change30D, lastUpdated = :lastUpdated WHERE unit = :unit")
-    fun updateExistingFT(unit: String, adaValue: Double, price: Double, balance: Double, change30D: Double, lastUpdated: ZonedDateTime)
+    @Query("UPDATE positionFT SET adaValue = :adaValue, price = :price, balance = :balance, change30D = :change30D, lastUpdated = :lastUpdated, showInFeed = :showInFeed WHERE unit = :unit")
+    fun updateExistingFT(unit: String, adaValue: Double, price: Double, balance: Double, change30D: Double, lastUpdated: ZonedDateTime, showInFeed: Boolean)
 
     // NFT Positions, name is the name, policy is unique
 
     @Query("SELECT * FROM positionNFT WHERE watchList = :watchlistNumber ORDER by adaValue DESC")
     fun getAllNFTPositions(watchlistNumber: Int): List<PositionNFTLocal>
+
+    @Query("SELECT * FROM positionNFT WHERE policy = :policy AND watchList = :watchList")
+    fun getNFTPositionByPolicy(policy: String, watchList: Int): PositionNFTLocal?
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insertNFT(positionNFTLocal: PositionNFTLocal): Long
@@ -59,7 +67,14 @@ interface PositionsDao {
     fun insertOrUpdateNFT(positionNFTLocal: PositionNFTLocal) {
         val id = insertNFT(positionNFTLocal)
         if (id == -1L) { // Insert failed, so update the existing entry
-            updateExistingNFT(positionNFTLocal.policy, positionNFTLocal.adaValue, positionNFTLocal.price, positionNFTLocal.balance, positionNFTLocal.change30D, positionNFTLocal.lastUpdated)
+            updateExistingNFT(
+                positionNFTLocal.policy,
+                positionNFTLocal.adaValue,
+                positionNFTLocal.price,
+                positionNFTLocal.balance,
+                positionNFTLocal.change30D,
+                positionNFTLocal.lastUpdated,
+                positionNFTLocal.showInFeed)
         }
     }
 
@@ -68,13 +83,19 @@ interface PositionsDao {
         positions.forEach { insertOrUpdateNFT(it) }
     }
 
-    @Query("UPDATE positionNFT SET adaValue = :adaValue, price = :price, balance = :balance, change30D = :change30D, lastUpdated = :lastUpdated WHERE policy = :policy")
-    fun updateExistingNFT(policy: String, adaValue: Double, price: Double, balance: Double, change30D: Double, lastUpdated: ZonedDateTime)
+    @Query("UPDATE positionNFT SET adaValue = :adaValue, price = :price, balance = :balance, change30D = :change30D, lastUpdated = :lastUpdated, showInFeed = :showInFeed WHERE policy = :policy")
+    fun updateExistingNFT(policy: String, adaValue: Double, price: Double, balance: Double, change30D: Double, lastUpdated: ZonedDateTime, showInFeed: Boolean)
 
     // LP positions
 
     @Query("SELECT * FROM positionLP WHERE watchList = :watchlistNumber ORDER by adaValue DESC")
     fun getAllLPPositions(watchlistNumber: Int): List<PositionLPLocal>
+
+    @Query("SELECT * FROM positionLP WHERE ticker = :ticker AND watchList = :watchList")
+    fun getLPPositionByTicker(ticker: String, watchList: Int): PositionLPLocal?
+
+    @Query("SELECT * FROM positionLP WHERE (tokenA = :unit OR tokenB = :unit) AND watchList = :watchList")
+    fun getLPPositionsByUnit(unit: String, watchList: Int): List<PositionLPLocal>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insertLP(positionLPLocal: PositionLPLocal): Long

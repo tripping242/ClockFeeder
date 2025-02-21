@@ -29,7 +29,9 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.TextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AddAlert
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.runtime.Composable
@@ -126,6 +128,12 @@ fun WatchlistsScreen(
                         onSaveClick = { config ->
                             // also reload showFTwithLp to update expanded part
                             viewModel.dispatch(WatchListViewModel.Action.SettingsChanged(config)) },
+                        onFTAlertClicked = { unit, watchList ->
+                            viewModel.dispatch(WatchListViewModel.Action.FTALertChanged(unit, watchList)) },
+                        onNFTAlertClicked = { policy, watchList ->
+                            viewModel.dispatch(WatchListViewModel.Action.NFTALertChanged(policy, watchList)) },
+                        onLPAlertClicked = { ticker, watchList ->
+                            viewModel.dispatch(WatchListViewModel.Action.LPALertChanged(ticker, watchList)) },
                         onReloadPositionsClick = { config ->
                             if (state.error != null) {
                                 viewModel.dispatch(WatchListViewModel.Action.ResetError)
@@ -206,6 +214,9 @@ fun WatchlistsScreen(
 fun ExpandableItem(
     isReloading: Boolean,
     isExpanded: Boolean,
+    onFTAlertClicked: (String, Int) -> Unit,
+    onNFTAlertClicked: (String, Int) -> Unit,
+    onLPAlertClicked: (String, Int) -> Unit,
     onClick: () -> Unit,
     onSaveClick: (WatchListConfig) -> Unit,
     onConfirmDeleteClick: (Int) -> Unit,
@@ -381,8 +392,14 @@ fun ExpandableItem(
                         val items = getPositionItems(showType, currentWatchListWithPositions)
                         items(items, key = { it.hashCode() }) { positionItem ->
                             when (positionItem) {
-                                is PositionItem.FT -> PositionFTItem(item = positionItem.positionFT)
-                                is PositionItem.NFT -> PositionNFTItem(item = positionItem.positionNFT)
+                                is PositionItem.FT -> PositionFTItem(
+                                    item = positionItem.positionFT,
+                                    onAlertClicked = { onFTAlertClicked(positionItem.positionFT.unit, currentWatchListWithPositions.watchListConfig.watchlistNumber) }
+                                )
+                                is PositionItem.NFT -> PositionNFTItem(
+                                    item = positionItem.positionNFT,
+                                    onAlertClicked = { onNFTAlertClicked(positionItem.positionNFT.policy, currentWatchListWithPositions.watchListConfig.watchlistNumber) }
+                                )
                                 is PositionItem.LP -> PositionLPItem(item = positionItem.positionLP)
                             }
                         }
@@ -703,7 +720,10 @@ fun SettingsDialog(
 }
 
 @Composable
-fun PositionNFTItem(item: PositionNFTLocal) {
+fun PositionNFTItem(
+    item: PositionNFTLocal,
+    onAlertClicked: () -> Unit,
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -730,11 +750,23 @@ fun PositionNFTItem(item: PositionNFTLocal) {
         )
 
         Text(text = item.lastUpdated.formattedHHMM())
+
+        IconButton(
+            onClick = {
+                //showInFeed = !showInFeed
+                onAlertClicked.invoke()
+            },
+            modifier = Modifier,
+        ) {
+            AppIcon(icon = if (item.showInFeed) Icons.Outlined.NotificationsActive else Icons.Outlined.AddAlert)
+        }
     }
 }
 
 @Composable
-fun PositionLPItem(item: PositionLPLocal) {
+fun PositionLPItem(
+    item: PositionLPLocal,
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -764,7 +796,10 @@ fun PositionLPItem(item: PositionLPLocal) {
 }
 
 @Composable
-fun PositionFTItem(item: PositionFTLocal) {
+fun PositionFTItem(
+    item: PositionFTLocal,
+    onAlertClicked: () -> Unit
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -796,5 +831,12 @@ fun PositionFTItem(item: PositionFTLocal) {
         )
 
         Text(text = item.lastUpdated.formattedHHMM())
+
+        IconButton(
+            onClick = onAlertClicked,
+            modifier = Modifier,
+        ) {
+            AppIcon(icon = if (item.showInFeed) Icons.Outlined.NotificationsActive else Icons.Outlined.AddAlert)
+        }
     }
 }

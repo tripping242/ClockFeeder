@@ -19,6 +19,10 @@ package com.codingblocks.clock.core
 
 import android.content.Context
 import com.codingblocks.clock.core.local.AppDatabase
+import com.codingblocks.clock.core.local.data.CustomFTAlert
+import com.codingblocks.clock.core.local.data.FeedFT
+import com.codingblocks.clock.core.local.data.FeedFTWithAlerts
+import com.codingblocks.clock.core.local.data.FeedNFT
 import com.codingblocks.clock.core.local.data.PositionFTLocal
 import com.codingblocks.clock.core.local.data.PositionLPLocal
 import com.codingblocks.clock.core.local.data.PositionNFTLocal
@@ -39,6 +43,7 @@ import com.codingblocks.clock.core.model.taptools.PositionsNft
 import com.codingblocks.clock.core.model.taptools.PositionsResponse
 import com.codingblocks.clock.core.model.taptools.TapToolsConfig
 import okhttp3.OkHttpClient
+import timber.log.Timber
 import java.time.ZonedDateTime
 
 interface DataRepo {
@@ -58,6 +63,30 @@ interface DataRepo {
     suspend fun addWatchlist(name: String, includeLPinFT: Boolean, includeNFT: Boolean, showLPTab: Boolean, walletAddress: String?) : Int
     suspend fun findWatchlistWithAddressOrName(address: String?, name: String): WatchListConfig?
     suspend fun updateWatchlistSettings(watchListConfig: WatchListConfig)
+
+    // positions
+    suspend fun getFTPositionBy(unit: String, watchList: Int): PositionFTLocal?
+    suspend fun updatePosition(position: PositionFTLocal)
+    suspend fun getNFTPositionBy(policy: String, watchList: Int): PositionNFTLocal?
+    suspend fun updatePosition(position: PositionNFTLocal)
+    suspend fun getLPPositionByTicker(ticker: String, watchList: Int): PositionLPLocal?
+    suspend fun updatePosition(position: PositionLPLocal)
+    suspend fun getLPPositionByUnit(unit: String, watchList: Int) : PositionLPLocal?
+
+    // feed to set alerts
+    suspend fun getAllFeedFT(): List<FeedFT>
+    suspend fun addFeedFT(feedFT: FeedFT): Boolean
+    suspend fun updateFeedFT(feedFT: FeedFT)
+    suspend fun deleteFeedFT(feedFT: FeedFT)
+    suspend fun deleteFeedFTByUnit(unit: String)
+    suspend fun replacePositionInFeedFT(oldUnit: String, newUnit: String)
+    suspend fun getAllFeedNFT(): List<FeedNFT>
+    suspend fun addFeedNFT(feedNFT: FeedNFT): Boolean
+    suspend fun updateFeedNFT(feedNFT: FeedNFT)
+    suspend fun deleteFeedNFT(feedNFT: FeedNFT)
+    suspend fun deleteFeedNFTByolicy(policy: String)
+    suspend fun replacePositionInFeedNFT(oldPolicy: String, newPolicy: String)
+
 }
 
 class CoreDataRepo(
@@ -71,6 +100,10 @@ class CoreDataRepo(
     private val blockFrostManager: BlockFrostManager = provideBlockFrostManager()
     private val positionsDao = database.getPositionsDao()
     private val watchlistsDao = database.getWatchListsDao()
+    private val feedFTDao = database.getFeedFTEntriesDao()
+    private val feedNFTDao = database.getFeedNFTEntriesDao()
+    private val customFTAlertDao = database.getFTAlertsDao()
+    private val customNFTAlertsDao = database.getNFTAlertsDao()
 
     private fun provideTapToolsManager(): TapToolsManager {
         return TapToolsManagerImpl.Builder(
@@ -96,15 +129,6 @@ class CoreDataRepo(
     override val watchlistsWithPositions: List<WatchlistWithPositions>
         get() = database.getWatchListsDao().getWatchlistsWithPositions()
 
-    /*override val positionsFT: Pair<WatchListConfig, List<PositionFTLocal>>
-        get() = database.getPositionsDao().getAllFTPositions()
-    override val positionsNFT: List<PositionNFTLocal>
-        get() = database.getPositionsDao().getAllNFTPositions()
-    override val positionsLP: List<PositionLPLocal>
-        get() = database.getPositionsDao().getAllLPPositions()
-    override val positionsFTIncludingLP: List<PositionFTLocal>
-        get() = getAllPositionsFTIncludingLP()*/
-
     override suspend fun getClockStatus(): Result<StatusResponse> = clockManager.getStatus()
     override suspend fun resolveAdaHandle(handle: String): Result<String> =
         blockFrostManager.resolveAdaHandle(handle)
@@ -115,18 +139,6 @@ class CoreDataRepo(
     override suspend fun loadPositionsForAddress(address: String): Result<PositionsResponse> =
         tapToolsManager.getPositionsForAddress(address)
 
-    /*override suspend fun getFTPositionsForWatchlist(): List<PositionFTLocal> {
-        return positionsDao.getAllFTPositions()
-    }
-
-    override suspend fun getNFTPositionsForWatchlist(): List<PositionNFTLocal> {
-        return positionsDao.getAllNFTPositions()
-    }
-
-    override suspend fun getLPPositionsForWatchlist(): List<PositionLPLocal> {
-        return positionsDao.getAllLPPositions()
-    }
-*/
     override suspend fun updateOrInsertPositions(
         watchList: Int,
         positionResponse: PositionsResponse
@@ -185,10 +197,105 @@ class CoreDataRepo(
         watchlistsDao.updateWatchListSettingsDb(watchListConfig)
     }
 
+    override suspend fun getFTPositionBy(unit: String, watchList: Int): PositionFTLocal? {
+        return positionsDao.getFTPositionByUnit(unit, watchList)
+    }
+
+    override suspend fun updatePosition(position: PositionFTLocal) {
+        Timber.tag("wims").i("update Position ${position.unit} ${position.showInFeed}\"")
+        positionsDao.insertOrUpdateFT(position)
+    }
+
+    override suspend fun updatePosition(position: PositionNFTLocal) {
+        positionsDao.insertOrUpdateNFT(position)
+    }
+
+    override suspend fun updatePosition(position: PositionLPLocal) {
+        positionsDao.insertOrUpdateLP(position)
+    }
+
+    override suspend fun getNFTPositionBy(policy: String, watchList: Int): PositionNFTLocal? {
+        return positionsDao.getNFTPositionByPolicy(policy, watchList)
+    }
+
+    override suspend fun getLPPositionByTicker(ticker: String, watchList: Int): PositionLPLocal? {
+        return positionsDao.getLPPositionByTicker(ticker, watchList)
+    }
+
+    override suspend fun getLPPositionByUnit(unit: String, watchList: Int): PositionLPLocal? {
+        // so we jsut take the position with highest adaValue here, in case we are sorting?
+        return positionsDao.getLPPositionsByUnit(unit, watchList).sortedByDescending { it.adaValue  }.firstOrNull()
+    }
+
+    override suspend fun getAllFeedFT(): List<FeedFT> {
+        return feedFTDao.getAllFeedFT()
+    }
+
+    override suspend fun addFeedFT(feedFT: FeedFT): Boolean {
+        Timber.tag("wims").i("add feed")
+        val result = feedFTDao.insert(feedFT)
+        Timber.tag("wims").i("add feed result = $result")
+        return result != -1L // Returns true if insertion was successful, false if a conflict occurred
+    }
+
+    override suspend fun updateFeedFT(feedFT: FeedFT) {
+        feedFTDao.update(feedFT)
+    }
+
+    override suspend fun deleteFeedFT(feedFT: FeedFT) {
+        feedFTDao.delete(feedFT)
+    }
+
+    override suspend fun deleteFeedFTByUnit(unit: String) {
+        feedFTDao.deleteByPositionUnit(unit)
+    }
+
+    override suspend fun replacePositionInFeedFT(oldUnit: String, newUnit: String) {
+        feedFTDao.replaceReferencedPositionFTLocal(oldUnit, newUnit)
+    }
+
+    override suspend fun getAllFeedNFT(): List<FeedNFT> {
+        return feedNFTDao.getAllFeedNFT()
+    }
+
+    override suspend fun addFeedNFT(feedNFT: FeedNFT): Boolean {
+        val result = feedNFTDao.insert(feedNFT)
+        return result != -1L // Returns true if insertion was successful, false if a conflict occurred
+    }
+
+    override suspend fun updateFeedNFT(feedNFT: FeedNFT) {
+        feedNFTDao.update(feedNFT)
+    }
+
+    override suspend fun deleteFeedNFT(feedNFT: FeedNFT) {
+        feedNFTDao.delete(feedNFT)
+    }
+
+    override suspend fun deleteFeedNFTByolicy(policy: String) {
+        feedNFTDao.deleteByPositionPolicy(policy)
+    }
+
+    override suspend fun replacePositionInFeedNFT(oldPolicy: String, newPolicy: String) {
+        feedNFTDao.replaceReferencedPositionNFTLocal(oldPolicy, newPolicy)
+    }
+
+    // todo add in interface first
+    suspend fun addFeedFTWithAlerts(feedFT: FeedFT, alerts: List<CustomFTAlert>) {
+        feedFTDao.insert(feedFT)
+        alerts.forEach { customFTAlertDao.insert(it) }
+    }
+
+    // Get a FeedFT with its alerts
+    suspend fun getFeedFTWithAlerts(positionUnit: String): FeedFTWithAlerts? {
+        val feedFT = feedFTDao.getFeedByPositionUnit(positionUnit)
+        return if (feedFT != null) {
+            val alerts = customFTAlertDao.getAlertsForFeed(positionUnit)
+            FeedFTWithAlerts(feedFT, alerts)
+        } else {
+            null
+        }
+    }
 }
-
-
-
 
 fun PositionsFt.toPositionFT(watchList: Int): PositionFTLocal {
     return PositionFTLocal(

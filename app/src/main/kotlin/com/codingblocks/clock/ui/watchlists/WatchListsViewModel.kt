@@ -5,6 +5,8 @@ import at.florianschuster.control.Controller
 import at.florianschuster.control.createController
 import com.codingblocks.clock.base.control.ControllerViewModel
 import com.codingblocks.clock.core.DataRepo
+import com.codingblocks.clock.core.local.data.FeedFT
+import com.codingblocks.clock.core.local.data.FeedNFT
 import com.codingblocks.clock.core.local.data.PositionFTLocal
 import com.codingblocks.clock.core.local.data.PositionLPLocal
 import com.codingblocks.clock.core.local.data.PositionNFTLocal
@@ -15,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import java.time.ZonedDateTime
 
 class WatchListViewModel(
     private val dataRepo: DataRepo
@@ -23,6 +26,7 @@ class WatchListViewModel(
     enum class ShowType {
         FT, NFT, LP, FT_LP
     }
+
     sealed class PositionItem {
         data class FT(val positionFT: PositionFTLocal) : PositionItem()
         data class NFT(val positionNFT: PositionNFTLocal) : PositionItem()
@@ -41,10 +45,15 @@ class WatchListViewModel(
         data class DeleteWatchList(val watchListNumber: Int) : Action()
         data object ResetError : Action()
         data object ResetAddError : Action()
+        data class FTALertChanged(val unit: String, val watchList: Int) : Action()
+        data class NFTALertChanged(val policy: String, val watchList: Int) : Action()
+        data class LPALertChanged(val ticker: String, val watchList: Int) : Action()
     }
 
     sealed class Mutation {
-        data class WatchlistsWithPositionsChanged(val watchlistsWithPositions: List<WatchlistWithPositions>) : Mutation()
+        data class WatchlistsWithPositionsChanged(val watchlistsWithPositions: List<WatchlistWithPositions>) :
+            Mutation()
+
         data class ClockStatusChanged(val statusResponse: StatusResponse) : Mutation()
         data class ShowAddWatchlistDialogChanged(val show: Boolean) : Mutation()
         data class ShowLoading(val show: Boolean) : Mutation()
@@ -104,6 +113,7 @@ class WatchListViewModel(
                             }
                         }
                     }
+
                     is Action.AddNewWatchlist -> flow {
                         emit(Mutation.ErrorAddWatchListDuplicateAddress(null))
                         emit(Mutation.ErrorAddWatchListDuplicateName(null))
@@ -111,18 +121,23 @@ class WatchListViewModel(
                         val newWatchlistConfig = action.config
                         Timber.tag("wims").i("revieved wathclist ${newWatchlistConfig}")
                         // check if name already taken or watchlist with this stakeAddress already exists
-                        val existingWatchlistConfig = dataRepo.findWatchlistWithAddressOrName(newWatchlistConfig.walletAddress,newWatchlistConfig.name)
+                        val existingWatchlistConfig = dataRepo.findWatchlistWithAddressOrName(
+                            newWatchlistConfig.walletAddress,
+                            newWatchlistConfig.name
+                        )
                         if (existingWatchlistConfig != null) {
                             Timber.tag("wims").i("already exists")
                             if (existingWatchlistConfig.walletAddress == newWatchlistConfig.walletAddress) {
                                 emit(Mutation.ResolvedAddressChanged(null))
                                 emit(Mutation.ErrorAddWatchListDuplicateAddress("You already have a watchlist with this stakeAddress: ${existingWatchlistConfig.name}"))
                             }
-                            if (existingWatchlistConfig.name == newWatchlistConfig.name) emit(Mutation.ErrorAddWatchListDuplicateName("This name is already used for one of your other watchlists"))
+                            if (existingWatchlistConfig.name == newWatchlistConfig.name) emit(
+                                Mutation.ErrorAddWatchListDuplicateName("This name is already used for one of your other watchlists")
+                            )
                         } else {
                             try {
                                 emit(Mutation.ErrorChanged(null))
-                                val watchlistNumber = with (newWatchlistConfig) {
+                                val watchlistNumber = with(newWatchlistConfig) {
                                     dataRepo.addWatchlist(
                                         name = name,
                                         includeNFT = includeNFT,
@@ -160,6 +175,7 @@ class WatchListViewModel(
                             }
                         }
                     }
+
                     is Action.SelectListToShow -> flow {
                         emit(Mutation.ShowTypeChanged(action.showType))
                     }
@@ -194,21 +210,22 @@ class WatchListViewModel(
                         action.walletAdress?.let { walletAddress ->
                             emit(Mutation.ShowReloading(action.watchListNumber))
                             dataRepo.loadPositionsForAddress(walletAddress).onSuccess {
-                                    dataRepo.updateOrInsertPositions(action.watchListNumber, it)
-                                    val updatedWatchlistsWithPositions =
-                                        dataRepo.watchlistsWithPositions
-                                    emit(
-                                        Mutation.WatchlistsWithPositionsChanged(
-                                            updatedWatchlistsWithPositions
-                                        )
+                                dataRepo.updateOrInsertPositions(action.watchListNumber, it)
+                                val updatedWatchlistsWithPositions =
+                                    dataRepo.watchlistsWithPositions
+                                emit(
+                                    Mutation.WatchlistsWithPositionsChanged(
+                                        updatedWatchlistsWithPositions
                                     )
-                                }.onFailure {
-                                    emit(Mutation.ErrorChanged("could not retrieve Positions:\n$it"))
-                                }
+                                )
+                            }.onFailure {
+                                emit(Mutation.ErrorChanged("could not retrieve Positions:\n$it"))
+                            }
                             emit(Mutation.ShowReloading(-1))
                         }
 
                     }
+
                     is Action.DeleteWatchList -> flow {
                         try {
                             dataRepo.deleteWatchlist(action.watchListNumber)
@@ -221,25 +238,118 @@ class WatchListViewModel(
                                     updatedWatchlistsWithPositions
                                 )
                             )
-                        } catch(e: Exception) {
+                        } catch (e: Exception) {
                             Timber.d("Could not remove watchlist")
                         } finally {
                             emit(Mutation.ShowLoading(false))
                         }
                     }
+
                     is Action.ResetError -> flow {
                         emit(Mutation.ErrorChanged(null))
                     }
+
                     is Action.ResetAddError -> flow {
                         emit(Mutation.ErrorAddWatchListDuplicateName(null))
                         emit(Mutation.ErrorAddWatchListDuplicateAddress(null))
                     }
+
                     is Action.ShowAddWatchListDialogChanged -> flow {
                         emit(Mutation.ShowAddWatchlistDialogChanged(action.show))
                     }
 
                     is Action.EnteredAddressChanged -> flow {
                         emit(Mutation.EnteredAddressChanged(action.address))
+                    }
+
+                    is Action.FTALertChanged -> flow {
+                        val updatePosition = dataRepo.getFTPositionBy(action.unit, action.watchList)
+                        updatePosition?.let {
+                            var showInfeed = true
+                            if (!updatePosition.showInFeed) {
+                                Timber.tag("wims").i("should add feed")
+                                val feedAdded = dataRepo.addFeedFT(
+                                    FeedFT(
+                                        updatePosition.unit,
+                                        ZonedDateTime.now(),
+                                        ZonedDateTime.now(),
+                                        true,
+                                        false,
+                                    )
+                                )
+                                showInfeed = feedAdded
+                            }
+                            if (showInfeed) {
+                                Timber.tag("wims").i("added, now size is ${dataRepo.getAllFeedFT().size}")
+                                dataRepo.updatePosition(
+                                    it.copy(showInFeed = !it.showInFeed)
+                                )
+                            }
+                        }
+                        if (updatePosition == null) {
+                            val updatePositionFtFromLP =
+                                dataRepo.getLPPositionByUnit(action.unit, action.watchList)
+                            updatePositionFtFromLP?.let {
+                                dataRepo.updatePosition(
+                                    it.copy(showInFeed = !it.showInFeed)
+                                )
+
+                            }
+                        }
+                        val updatedWatchlistsWithPositions =
+                            dataRepo.watchlistsWithPositions
+                        emit(
+                            Mutation.WatchlistsWithPositionsChanged(
+                                updatedWatchlistsWithPositions
+                            )
+                        )
+                    }
+
+                    is Action.NFTALertChanged -> flow {
+                        dataRepo.getNFTPositionBy(action.policy, action.watchList)
+                            ?.let { updatePosition ->
+                                var showInfeed = true
+                                if (!updatePosition.showInFeed) {
+                                    val feedAdded = dataRepo.addFeedNFT(
+                                        FeedNFT(
+                                            updatePosition.policy,
+                                            ZonedDateTime.now(),
+                                            ZonedDateTime.now(),
+                                            true,
+                                            false,
+                                        )
+                                    )
+                                    showInfeed = feedAdded
+                                }
+                                if (showInfeed) {
+                                    dataRepo.updatePosition(
+                                        updatePosition.copy(showInFeed = !updatePosition.showInFeed)
+                                    )
+                                }
+                            }
+                        val updatedWatchlistsWithPositions =
+                            dataRepo.watchlistsWithPositions
+                        emit(
+                            Mutation.WatchlistsWithPositionsChanged(
+                                updatedWatchlistsWithPositions
+                            )
+                        )
+                    }
+
+                    is Action.LPALertChanged -> flow {
+                        dataRepo.getLPPositionByTicker(action.ticker, action.watchList)
+                            ?.let {
+                                dataRepo.updatePosition(
+                                    it.copy(showInFeed = !it.showInFeed)
+                                )
+                            }
+                        val updatedWatchlistsWithPositions =
+                            dataRepo.watchlistsWithPositions
+                        emit(
+                            Mutation.WatchlistsWithPositionsChanged(
+                                updatedWatchlistsWithPositions
+                            )
+                        )
                     }
                 }
             },
@@ -248,7 +358,10 @@ class WatchListViewModel(
                     is Mutation.ClockStatusChanged -> previousState.copy(status = mutation.statusResponse)
                     is Mutation.ErrorChanged -> previousState.copy(error = mutation.errorMessage)
                     is Mutation.ShowTypeChanged -> previousState.copy(showType = mutation.showType)
-                    is Mutation.WatchlistsWithPositionsChanged -> previousState.copy(watchlistsWithPositions = mutation.watchlistsWithPositions)
+                    is Mutation.WatchlistsWithPositionsChanged -> previousState.copy(
+                        watchlistsWithPositions = mutation.watchlistsWithPositions
+                    )
+
                     is Mutation.ErrorAddWatchListDuplicateName -> {
                         previousState.copy(
                             errorAddWatchlist = mutation.errorMessage,
@@ -260,7 +373,11 @@ class WatchListViewModel(
                         errorAddWatchlist = mutation.errorMessage,
                         errorDuplicateAddress = mutation.errorMessage != null
                     )
-                    is Mutation.ShowAddWatchlistDialogChanged -> previousState.copy(showAddWatchListDialog = mutation.show)
+
+                    is Mutation.ShowAddWatchlistDialogChanged -> previousState.copy(
+                        showAddWatchListDialog = mutation.show
+                    )
+
                     is Mutation.ShowLoading -> previousState.copy(isLoading = mutation.show)
                     is Mutation.ShowReloading -> previousState.copy(reloadingWatchListNumber = mutation.watchListNumber)
                     is Mutation.ResolveErrorChanged -> previousState.copy(resolveError = mutation.errorMessage)
