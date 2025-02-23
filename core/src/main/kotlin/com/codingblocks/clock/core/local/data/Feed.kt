@@ -8,19 +8,12 @@ import java.time.ZonedDateTime
 
 @Entity(
     tableName = "feedFT",
-    foreignKeys = [
-        ForeignKey(
-            entity = PositionFTLocal::class,
-            parentColumns = ["unit"],
-            childColumns = ["positionUnit"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ],
     indices = [Index(value = ["positionUnit"])]
 )
 data class FeedFT(
     @PrimaryKey
     val positionUnit: String,
+    val name: String,
     val createdAt: ZonedDateTime,
     var lastUpdatedAt: ZonedDateTime,
     var feedClockPrice: Boolean,
@@ -29,14 +22,6 @@ data class FeedFT(
 
 @Entity(
     tableName = "feedNFT",
-    foreignKeys = [
-        ForeignKey(
-            entity = PositionNFTLocal::class,
-            parentColumns = ["policy"],
-            childColumns = ["positionPolicy"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ],
     indices = [Index(value = ["positionPolicy"])]
 )
 data class FeedNFT(

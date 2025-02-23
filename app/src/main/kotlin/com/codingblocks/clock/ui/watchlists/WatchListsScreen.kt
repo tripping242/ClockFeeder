@@ -127,8 +127,8 @@ fun WatchlistsScreen(
                             viewModel.dispatch(WatchListViewModel.Action.FTALertChanged(unit, watchList)) },
                         onNFTAlertClicked = { policy, watchList ->
                             viewModel.dispatch(WatchListViewModel.Action.NFTALertChanged(policy, watchList)) },
-                        onLPAlertClicked = { ticker, watchList ->
-                            viewModel.dispatch(WatchListViewModel.Action.LPALertChanged(ticker, watchList)) },
+                        onLPAlertClicked = { unit, watchList ->
+                            viewModel.dispatch(WatchListViewModel.Action.LPALertChanged(unit, watchList)) },
                         onReloadPositionsClick = { config ->
                             if (state.error != null) {
                                 viewModel.dispatch(WatchListViewModel.Action.ResetError)

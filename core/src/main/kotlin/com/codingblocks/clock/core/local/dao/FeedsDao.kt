@@ -24,21 +24,13 @@ interface FeedFTDao {
     suspend fun delete(feedFT: FeedFT)
 
     @Query("SELECT * FROM feedFT WHERE positionUnit = :unit")
-    suspend fun getFeedByPositionUnit(unit: String): FeedFT?
+    suspend fun getFeedFTByPositionUnit(unit: String): FeedFT?
 
     @Query("SELECT * FROM feedFT ORDER by lastUpdatedAt DESC")
     suspend fun getAllFeedFT(): List<FeedFT>
 
     @Query("DELETE FROM feedFT WHERE positionUnit = :unit")
     suspend fun deleteByPositionUnit(unit: String)
-
-    @Transaction
-    suspend fun replaceReferencedPositionFTLocal(oldUnit: String, newUnit: String) {
-        val feed = getFeedByPositionUnit(oldUnit)
-        if (feed != null) {
-            update(feed.copy(positionUnit = newUnit))
-        }
-    }
 
     @Transaction
     @Query("SELECT * FROM feedFT")
@@ -66,18 +58,6 @@ interface FeedNFTDao {
     suspend fun deleteByPositionPolicy(policy: String)
 
     @Transaction
-    suspend fun replaceReferencedPositionNFTLocal(oldPolicy: String, newPolicy: String) {
-        val feed = getFeedByPositionPolicy(oldPolicy)
-        if (feed != null) {
-            delete(feed)
-            val newFeed = feed.copy(positionPolicy = newPolicy)
-            insert(newFeed)
-        }
-    }
-
-    @Transaction
     @Query("SELECT * FROM feedNFT")
     fun getFeedsNFTWithAlerts(): List<FeedNFTWithAlerts>
-
-
 }

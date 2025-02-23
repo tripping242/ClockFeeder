@@ -9,7 +9,6 @@ import androidx.room.Transaction
 import androidx.room.Update
 import com.codingblocks.clock.core.local.data.PositionLPLocal
 import com.codingblocks.clock.core.local.data.PositionNFTLocal
-import timber.log.Timber
 import java.time.ZonedDateTime
 
 @Dao
@@ -19,7 +18,10 @@ interface PositionsDao {
     fun getAllFTPositions(watchlistNumber: Int): List<PositionFTLocal>
 
     @Query("SELECT * FROM positionFT WHERE unit = :unit AND watchList = :watchList")
-    fun getFTPositionByUnit(unit: String, watchList: Int): PositionFTLocal?
+    fun getFTPositionsByUnit(unit: String, watchList: Int): PositionFTLocal?
+
+    @Query("SELECT * FROM positionFT WHERE unit = :unit")
+    fun getFTPositionsByUnit(unit: String): List<PositionFTLocal>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insertFT(positionFTLocal: PositionFTLocal): Long
@@ -97,6 +99,15 @@ interface PositionsDao {
     @Query("SELECT * FROM positionLP WHERE (tokenA = :unit OR tokenB = :unit) AND watchList = :watchList")
     fun getLPPositionsByUnit(unit: String, watchList: Int): List<PositionLPLocal>
 
+    @Query("SELECT * FROM positionLP WHERE tokenA = :unit OR tokenB = :unit")
+    fun getLPPositionsByUnit(unit: String): List<PositionLPLocal>
+
+    @Query("SELECT * FROM positionLP WHERE tokenA = :unit")
+    fun getLPPositionsTokenAByUnit(unit: String): List<PositionLPLocal>
+
+    @Query("SELECT * FROM positionLP WHERE tokenB = :unit")
+    fun getLPPositionsTokenBByUnit(unit: String): List<PositionLPLocal>
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insertLP(positionLPLocal: PositionLPLocal): Long
 
@@ -110,6 +121,8 @@ interface PositionsDao {
                 positionLPLocal.amountLP,
                 positionLPLocal.tokenAAmount,
                 positionLPLocal.tokenBAmount,
+                positionLPLocal.showInFeedA,
+                positionLPLocal.showInFeedB,
                 positionLPLocal.lastUpdated,
             )
         }
@@ -121,6 +134,15 @@ interface PositionsDao {
             insertOrUpdateLP(it) }
     }
 
-    @Query("UPDATE positionLP SET adaValue = :adaValue, amountLP = :amountLP, tokenAAmount = :tokenAAmount, tokenBAmount = :tokenBAmount, lastUpdated = :lastUpdated WHERE ticker = :ticker")
-    fun updateExistingLP(ticker: String, adaValue: Double, amountLP: Double, tokenAAmount: Double, tokenBAmount: Double, lastUpdated: ZonedDateTime)
+    @Query("UPDATE positionLP SET adaValue = :adaValue, amountLP = :amountLP, tokenAAmount = :tokenAAmount, tokenBAmount = :tokenBAmount, showInFeedA = :showInFeedA, showInFeedB = :showInFeedB, lastUpdated = :lastUpdated WHERE ticker = :ticker")
+    fun updateExistingLP(
+        ticker: String,
+        adaValue: Double,
+        amountLP: Double,
+        tokenAAmount: Double,
+        tokenBAmount: Double,
+        showInFeedA: Boolean,
+        showInFeedB: Boolean,
+        lastUpdated: ZonedDateTime
+    )
 }

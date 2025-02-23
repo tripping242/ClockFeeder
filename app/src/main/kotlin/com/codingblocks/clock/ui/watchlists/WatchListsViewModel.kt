@@ -47,7 +47,7 @@ class WatchListViewModel(
         data object ResetAddError : Action()
         data class FTALertChanged(val unit: String, val watchList: Int) : Action()
         data class NFTALertChanged(val policy: String, val watchList: Int) : Action()
-        data class LPALertChanged(val ticker: String, val watchList: Int) : Action()
+        data class LPALertChanged(val unit: String, val watchList: Int) : Action()
     }
 
     sealed class Mutation {
@@ -264,13 +264,37 @@ class WatchListViewModel(
                         val updatePosition = dataRepo.getFTPositionBy(action.unit, action.watchList)
                         var shouldUpdatePosition = true
                         Timber.tag("wims").i("updatePosition ${updatePosition?.ticker}")
-                        if (updatePosition!=null) {
-                            if (!updatePosition.showInFeed) {
+                        if (updatePosition != null) {
+                            Timber.tag("wims").i("should add feed")
+                            val feedAdded = dataRepo.addFeedFT(
+                                FeedFT(
+                                    updatePosition.unit,
+                                    updatePosition.ticker,
+                                    ZonedDateTime.now(),
+                                    ZonedDateTime.now(),
+                                    true,
+                                    false,
+                                )
+                            )
+                            shouldUpdatePosition = feedAdded
+                        } else {
+                            val updatePositionFtFromLP =
+                                dataRepo.getLPPositionByUnit(action.unit, action.watchList)
+                            if (updatePositionFtFromLP != null) with(updatePositionFtFromLP) {
+                                Timber.tag("wims")
+                                    .i("updatePositionFTfromLP ${updatePositionFtFromLP}")
+
+                                // check if we found tokenA or tokenB
+                                val tokenToAdd = if (tokenA == action.unit) tokenA else tokenB
+                                val tokenToAddName =
+                                    if (tokenA == action.unit) tokenAName else tokenBName
+                                Timber.tag("wims")
+                                    .i("tokenToAddName $tokenToAddName tokenToAdd ${tokenToAdd} ")
                                 Timber.tag("wims").i("should add feed")
                                 val feedAdded = dataRepo.addFeedFT(
                                     FeedFT(
-                                        updatePosition.unit,
-                                        updatePosition.ticker,
+                                        tokenToAdd,
+                                        tokenToAddName,
                                         ZonedDateTime.now(),
                                         ZonedDateTime.now(),
                                         true,
@@ -278,57 +302,13 @@ class WatchListViewModel(
                                     )
                                 )
                                 shouldUpdatePosition = feedAdded
-                            } else {
-                                Timber.tag("wims").i("should remove feed")
-                                dataRepo.deleteFeedFTByUnit(updatePosition.unit)
-                            }
-                            if (shouldUpdatePosition) {
-                                Timber.tag("wims").i("changed, now size is ${dataRepo.getAllFeedFT().size}")
-                                dataRepo.updatePosition(
-                                    updatePosition.copy(showInFeed = !updatePosition.showInFeed)
-                                )
-                            }
-                        } else {
-                            val updatePositionFtFromLP =
-                                dataRepo.getLPPositionByUnit(action.unit, action.watchList)
-                            if (updatePositionFtFromLP != null) with (updatePositionFtFromLP) {
-                                Timber.tag("wims").i("updatePositionFTfromLP ${updatePositionFtFromLP}")
-
-                                // check if we found tokenA or tokenB
-                                val tokenToAdd = if (tokenA == action.unit) tokenA else tokenB
-                                val tokenToAddName = if (tokenA == action.unit) tokenAName else tokenBName
-                                Timber.tag("wims").i("tokenToAddName $tokenToAddName tokenToAdd ${tokenToAdd} ")
-
-                                if (!showInFeed) {
-                                    Timber.tag("wims").i("should add feed")
-                                    val feedAdded = dataRepo.addFeedFT(
-                                        FeedFT(
-                                            tokenToAdd,
-                                            tokenToAddName,
-                                            ZonedDateTime.now(),
-                                            ZonedDateTime.now(),
-                                            true,
-                                            false,
-                                        )
-                                    )
-                                    shouldUpdatePosition = feedAdded
-                                } else {
-                                    Timber.tag("wims").i("should remove feed")
-                                    dataRepo.deleteFeedFTByUnit(tokenToAdd)
-                                }
-                                if (shouldUpdatePosition) {
-                                    Timber.tag("wims").i("changed, now size is ${dataRepo.getAllFeedFT().size}")
-                                    dataRepo.updatePosition(
-                                        copy(showInFeed = !showInFeed)
-                                    )
-                                }
                             }
                             else {
                                 shouldUpdatePosition = false
                             }
                         }
-                        Timber.tag("wims").i("should update updatedWatchlistsWithPositions $shouldUpdatePosition")
                         if (shouldUpdatePosition) {
+                            dataRepo.updateAllFTAndLPPositionsShowFeed(action.unit, true)
                             val updatedWatchlistsWithPositions =
                                 dataRepo.watchlistsWithPositions
                             emit(
@@ -357,8 +337,6 @@ class WatchListViewModel(
                                         )
                                     )
                                     shouldUpdatePosition = feedAdded
-                                } else {
-                                    dataRepo.deleteFeedNFTByPolicy(updatePosition.policy)
                                 }
                                 if (shouldUpdatePosition) {
                                     dataRepo.updatePosition(
@@ -377,19 +355,52 @@ class WatchListViewModel(
                     }
 
                     is Action.LPALertChanged -> flow {
-                        dataRepo.getLPPositionByTicker(action.ticker, action.watchList)
-                            ?.let {
-                                dataRepo.updatePosition(
-                                    it.copy(showInFeed = !it.showInFeed)
+                        var shouldUpdatePosition = true
+                        val updatePositionFtFromLP =
+                            dataRepo.getLPPositionByUnit(action.unit, action.watchList)
+                        if (updatePositionFtFromLP != null) with(updatePositionFtFromLP) {
+                            Timber.tag("wims").i("updatePositionFTfromLP ${updatePositionFtFromLP}")
+
+                            // check if we found tokenA or tokenB
+                            val tokenToAdd = if (tokenA == action.unit) tokenA else tokenB
+                            val tokenToAddName =
+                                if (tokenA == action.unit) tokenAName else tokenBName
+                            Timber.tag("wims")
+                                .i("tokenToAddName $tokenToAddName tokenToAdd ${tokenToAdd} ")
+                            Timber.tag("wims").i("should add feed")
+                            val feedAdded = dataRepo.addFeedFT(
+                                FeedFT(
+                                    tokenToAdd,
+                                    tokenToAddName,
+                                    ZonedDateTime.now(),
+                                    ZonedDateTime.now(),
+                                    true,
+                                    false,
                                 )
-                            }
-                        val updatedWatchlistsWithPositions =
-                            dataRepo.watchlistsWithPositions
-                        emit(
-                            Mutation.WatchlistsWithPositionsChanged(
-                                updatedWatchlistsWithPositions
                             )
-                        )
+                            shouldUpdatePosition = feedAdded
+                            if (shouldUpdatePosition) {
+                                Timber.tag("wims")
+                                    .i("changed, now size is ${dataRepo.getAllFeedFT().size}")
+                                dataRepo.updateAllFTAndLPPositionsShowFeed(unit, true)
+                            }
+                        }
+                        else {
+                            shouldUpdatePosition = false
+                        }
+                        Timber.tag("wims")
+                            .i("should update updatedWatchlistsWithPositions $shouldUpdatePosition")
+                        if (shouldUpdatePosition) {
+                            val updatedWatchlistsWithPositions =
+                                dataRepo.watchlistsWithPositions
+                            emit(
+                                Mutation.WatchlistsWithPositionsChanged(
+                                    updatedWatchlistsWithPositions
+                                )
+                            )
+                        } else {
+                            emit(Mutation.ErrorChanged("Could not update setting"))
+                        }
                     }
                 }
             },

@@ -54,28 +54,37 @@ interface DataRepo {
     val feedsNFTWithAlerts: List<FeedNFTWithAlerts>
 
     // Blockclock
-    suspend fun getClockStatus() : Result<StatusResponse>
+    suspend fun getClockStatus(): Result<StatusResponse>
 
     // wallet with address
     suspend fun resolveAdaHandle(handle: String): Result<String>
-    suspend fun getStakeAddress(address: String) : Result<String>
-    suspend fun loadPositionsForAddress(address: String) : Result<PositionsResponse>
+    suspend fun getStakeAddress(address: String): Result<String>
+    suspend fun loadPositionsForAddress(address: String): Result<PositionsResponse>
     suspend fun updateOrInsertPositions(watchList: Int, positionResponse: PositionsResponse)
     suspend fun deleteWatchlist(watchList: Int)
 
     // watchlist with contents
-    suspend fun addWatchlist(name: String, includeLPinFT: Boolean, includeNFT: Boolean, showLPTab: Boolean, walletAddress: String?) : Int
+    suspend fun addWatchlist(
+        name: String,
+        includeLPinFT: Boolean,
+        includeNFT: Boolean,
+        showLPTab: Boolean,
+        walletAddress: String?
+    ): Int
+
     suspend fun findWatchlistWithAddressOrName(address: String?, name: String): WatchListConfig?
     suspend fun updateWatchlistSettings(watchListConfig: WatchListConfig)
 
     // positions
     suspend fun getFTPositionBy(unit: String, watchList: Int): PositionFTLocal?
     suspend fun updatePosition(position: PositionFTLocal)
+    suspend fun updateAllFTAndLPPositionsShowFeed(unit: String, showFeed: Boolean)
     suspend fun getNFTPositionBy(policy: String, watchList: Int): PositionNFTLocal?
     suspend fun updatePosition(position: PositionNFTLocal)
+    suspend fun updateAllNFTPositionsShowFeed(policy: String, showFeed: Boolean)
     suspend fun getLPPositionByTicker(ticker: String, watchList: Int): PositionLPLocal?
     suspend fun updatePosition(position: PositionLPLocal)
-    suspend fun getLPPositionByUnit(unit: String, watchList: Int) : PositionLPLocal?
+    suspend fun getLPPositionByUnit(unit: String, watchList: Int): PositionLPLocal?
 
     // feed to set alerts
     suspend fun getAllFeedFT(): List<FeedFT>
@@ -83,13 +92,12 @@ interface DataRepo {
     suspend fun updateFeedFT(feedFT: FeedFT)
     suspend fun deleteFeedFT(feedFT: FeedFT)
     suspend fun deleteFeedFTByUnit(unit: String)
-    suspend fun replacePositionInFeedFT(oldUnit: String, newUnit: String)
+
     suspend fun getAllFeedNFT(): List<FeedNFT>
     suspend fun addFeedNFT(feedNFT: FeedNFT): Boolean
     suspend fun updateFeedNFT(feedNFT: FeedNFT)
     suspend fun deleteFeedNFT(feedNFT: FeedNFT)
     suspend fun deleteFeedNFTByPolicy(policy: String)
-    suspend fun replacePositionInFeedNFT(oldPolicy: String, newPolicy: String)
 
     // feed with alerts
     suspend fun addFeedFTWithAlerts(feedFT: FeedFT, alerts: List<CustomFTAlert>)
@@ -97,7 +105,7 @@ interface DataRepo {
     suspend fun addFeedNFTWithAlerts(feedNFT: FeedNFT, alerts: List<CustomNFTAlert>)
     suspend fun getFeedNFTWithAlerts(positionPolicy: String): FeedNFTWithAlerts?
 
-        // alerts
+    // alerts
     suspend fun deleteAlert(alert: CustomFTAlert)
     suspend fun deleteAlert(alert: CustomNFTAlert)
 
@@ -134,8 +142,8 @@ class CoreDataRepo(
         return ClockManagerImpl.Builder(
             context,
         ).setOkHttpClient(
-                okHttpClient.newBuilder().build()
-            ).build()
+            okHttpClient.newBuilder().build()
+        ).build()
     }
 
     private fun provideBlockFrostManager(): BlockFrostManager {
@@ -213,15 +221,15 @@ class CoreDataRepo(
             .find {
                 it.name == name || it.walletAddress == address
 
-        }
+            }
     }
 
-    override suspend fun updateWatchlistSettings(watchListConfig: WatchListConfig, ) {
+    override suspend fun updateWatchlistSettings(watchListConfig: WatchListConfig) {
         watchlistsDao.updateWatchListSettingsDb(watchListConfig)
     }
 
     override suspend fun getFTPositionBy(unit: String, watchList: Int): PositionFTLocal? {
-        return positionsDao.getFTPositionByUnit(unit, watchList)
+        return positionsDao.getFTPositionsByUnit(unit, watchList)
     }
 
     override suspend fun updatePosition(position: PositionFTLocal) {
@@ -237,8 +245,26 @@ class CoreDataRepo(
         positionsDao.insertOrUpdateLP(position)
     }
 
+    override suspend fun updateAllFTAndLPPositionsShowFeed(unit: String, showFeed: Boolean) {
+        positionsDao.getFTPositionsByUnit(unit).forEach { pos ->
+            positionsDao.insertOrUpdateFT(pos.copy(showInFeed = showFeed))
+        }
+        positionsDao.getLPPositionsByUnit(unit).forEach { pos ->
+            positionsDao.insertOrUpdateLP(
+                pos.copy(
+                    showInFeedA = if (pos.tokenA == unit) showFeed else pos.showInFeedA,
+                    showInFeedB = if (pos.tokenB == unit) showFeed else pos.showInFeedB
+                )
+            )
+        }
+    }
+
     override suspend fun getNFTPositionBy(policy: String, watchList: Int): PositionNFTLocal? {
         return positionsDao.getNFTPositionByPolicy(policy, watchList)
+    }
+
+    override suspend fun updateAllNFTPositionsShowFeed(policy: String, showFeed: Boolean) {
+        TODO("Not yet implemented")
     }
 
     override suspend fun getLPPositionByTicker(ticker: String, watchList: Int): PositionLPLocal? {
@@ -247,7 +273,8 @@ class CoreDataRepo(
 
     override suspend fun getLPPositionByUnit(unit: String, watchList: Int): PositionLPLocal? {
         // so we jsut take the position with highest adaValue here, in case we are sorting?
-        return positionsDao.getLPPositionsByUnit(unit, watchList).sortedByDescending { it.adaValue  }.firstOrNull()
+        return positionsDao.getLPPositionsByUnit(unit, watchList).sortedByDescending { it.adaValue }
+            .firstOrNull()
     }
 
     override suspend fun getAllFeedFT(): List<FeedFT> {
@@ -273,19 +300,12 @@ class CoreDataRepo(
         feedFTDao.deleteByPositionUnit(unit)
     }
 
-    // todo this wont work if haveing either positionUnit, positionTokenA and positionTokenB
-    override suspend fun replacePositionInFeedFT(oldUnit: String, newUnit: String) {
-        feedFTDao.replaceReferencedPositionFTLocal(oldUnit, newUnit)
-    }
-
     override suspend fun getAllFeedNFT(): List<FeedNFT> {
         return feedNFTDao.getAllFeedNFT()
     }
 
     override suspend fun addFeedNFT(feedNFT: FeedNFT): Boolean {
         val result = feedNFTDao.insert(feedNFT)
-        Timber.tag("wims").i("add feed result = $result")
-
         return result != -1L // Returns true if insertion was successful, false if a conflict occurred
     }
 
@@ -299,10 +319,6 @@ class CoreDataRepo(
 
     override suspend fun deleteFeedNFTByPolicy(policy: String) {
         feedNFTDao.deleteByPositionPolicy(policy)
-    }
-
-    override suspend fun replacePositionInFeedNFT(oldPolicy: String, newPolicy: String) {
-        feedNFTDao.replaceReferencedPositionNFTLocal(oldPolicy, newPolicy)
     }
 
     override suspend fun deleteAlert(alert: CustomFTAlert) {
@@ -322,8 +338,8 @@ class CoreDataRepo(
     }
 
     override suspend fun deleteAlertsForFeedWithUnit(feedFT: FeedFT) {
-    // todo check
-    //customFTAlertDao.deleteAlertsForFeed(it) }
+        // todo check
+        //customFTAlertDao.deleteAlertsForFeed(it) }
     }
 
     override suspend fun deleteAlertsForFeedWithPolicy(policy: String) {
@@ -336,7 +352,7 @@ class CoreDataRepo(
     }
 
     override suspend fun getFeedFTWithAlerts(positionUnit: String): FeedFTWithAlerts? {
-        val feedFT = feedFTDao.getFeedByUnit(positionUnit)
+        val feedFT = feedFTDao.getFeedFTByPositionUnit(positionUnit)
         return if (feedFT != null) {
             val alerts = customFTAlertDao.getAlertsForFeed(positionUnit)
             FeedFTWithAlerts(feedFT, alerts)
@@ -405,8 +421,9 @@ fun PositionsLp.toPositionsLP(watchList: Int): PositionLPLocal {
         tokenBAmount = this.tokenBAmount,
         tokenBName = this.tokenBName,
         unit = this.unit,
-        showInFeed = false,  // Default value, adjust if needed
-        watchList = watchList,  // Default value, adjust if needed
+        showInFeedA = false,
+        showInFeedB = false,
+        watchList = watchList,
         createdAt = ZonedDateTime.now(),
         lastUpdated = ZonedDateTime.now(),
     )
@@ -417,23 +434,24 @@ fun PositionLPLocal.tokenAToPositionFT(watchList: Int): PositionFTLocal {
     return PositionFTLocal(
         ticker = lp.tokenAName,
         fingerprint = "",
-        adaValue = lp.adaValue/2,
+        adaValue = lp.adaValue / 2,
         price = -1.0, // Handle null price
         unit = lp.tokenA,
         balance = lp.tokenAAmount,
         change30D = 0.0,
-        showInFeed = false,  // Default value, adjust if needed
+        showInFeed = lp.showInFeedA || lp.showInFeedB,  // Default value, adjust if needed
         watchList = watchList,
         createdAt = ZonedDateTime.now(),
         lastUpdated = ZonedDateTime.now()
     )
 }
+
 fun PositionLPLocal.tokenBToPositionFT(watchList: Int): PositionFTLocal {
     val lp = this
     return PositionFTLocal(
         ticker = lp.tokenBName,
         fingerprint = "",
-        adaValue = lp.adaValue/2,
+        adaValue = lp.adaValue / 2,
         price = -1.0, // Handle null price
         unit = lp.tokenB,
         balance = lp.tokenBAmount,
