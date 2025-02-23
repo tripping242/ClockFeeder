@@ -8,7 +8,9 @@ import androidx.room.Delete
 import androidx.room.OnConflictStrategy
 import androidx.room.Transaction
 import com.codingblocks.clock.core.local.data.FeedFT
+import com.codingblocks.clock.core.local.data.FeedFTWithAlerts
 import com.codingblocks.clock.core.local.data.FeedNFT
+import com.codingblocks.clock.core.local.data.FeedNFTWithAlerts
 
 @Dao
 interface FeedFTDao {
@@ -34,11 +36,13 @@ interface FeedFTDao {
     suspend fun replaceReferencedPositionFTLocal(oldUnit: String, newUnit: String) {
         val feed = getFeedByPositionUnit(oldUnit)
         if (feed != null) {
-            delete(feed)
-            val newFeed = feed.copy(positionUnit = newUnit)
-            insert(newFeed)
+            update(feed.copy(positionUnit = newUnit))
         }
     }
+
+    @Transaction
+    @Query("SELECT * FROM feedFT")
+    fun getFeedsFTWithAlerts(): List<FeedFTWithAlerts>
 }
 
 @Dao
@@ -70,6 +74,10 @@ interface FeedNFTDao {
             insert(newFeed)
         }
     }
+
+    @Transaction
+    @Query("SELECT * FROM feedNFT")
+    fun getFeedsNFTWithAlerts(): List<FeedNFTWithAlerts>
 
 
 }

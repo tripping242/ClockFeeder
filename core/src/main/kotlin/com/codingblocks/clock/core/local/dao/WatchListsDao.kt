@@ -22,7 +22,7 @@ interface WatchListsDao {
     @Update
     fun updateWatchListSettingsDb(watchListConfig: WatchListConfig)
 
-    // merged obect with all watchlists containing there positionLists
+    // merged object with all watchlists containing there positionLists
     @Transaction
     @Query("SELECT * FROM watchListConfig")
     fun getWatchlistsWithPositions(): List<WatchlistWithPositions>

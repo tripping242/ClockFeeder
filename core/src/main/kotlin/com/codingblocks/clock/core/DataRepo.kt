@@ -20,9 +20,11 @@ package com.codingblocks.clock.core
 import android.content.Context
 import com.codingblocks.clock.core.local.AppDatabase
 import com.codingblocks.clock.core.local.data.CustomFTAlert
+import com.codingblocks.clock.core.local.data.CustomNFTAlert
 import com.codingblocks.clock.core.local.data.FeedFT
 import com.codingblocks.clock.core.local.data.FeedFTWithAlerts
 import com.codingblocks.clock.core.local.data.FeedNFT
+import com.codingblocks.clock.core.local.data.FeedNFTWithAlerts
 import com.codingblocks.clock.core.local.data.PositionFTLocal
 import com.codingblocks.clock.core.local.data.PositionLPLocal
 import com.codingblocks.clock.core.local.data.PositionNFTLocal
@@ -48,6 +50,8 @@ import java.time.ZonedDateTime
 
 interface DataRepo {
     val watchlistsWithPositions: List<WatchlistWithPositions>
+    val feedFTWithAlerts: List<FeedFTWithAlerts>
+    val feedsNFTWithAlerts: List<FeedNFTWithAlerts>
 
     // Blockclock
     suspend fun getClockStatus() : Result<StatusResponse>
@@ -84,8 +88,23 @@ interface DataRepo {
     suspend fun addFeedNFT(feedNFT: FeedNFT): Boolean
     suspend fun updateFeedNFT(feedNFT: FeedNFT)
     suspend fun deleteFeedNFT(feedNFT: FeedNFT)
-    suspend fun deleteFeedNFTByolicy(policy: String)
+    suspend fun deleteFeedNFTByPolicy(policy: String)
     suspend fun replacePositionInFeedNFT(oldPolicy: String, newPolicy: String)
+
+    // feed with alerts
+    suspend fun addFeedFTWithAlerts(feedFT: FeedFT, alerts: List<CustomFTAlert>)
+    suspend fun getFeedFTWithAlerts(positionUnit: String): FeedFTWithAlerts?
+    suspend fun addFeedNFTWithAlerts(feedNFT: FeedNFT, alerts: List<CustomNFTAlert>)
+    suspend fun getFeedNFTWithAlerts(positionPolicy: String): FeedNFTWithAlerts?
+
+        // alerts
+    suspend fun deleteAlert(alert: CustomFTAlert)
+    suspend fun deleteAlert(alert: CustomNFTAlert)
+
+    suspend fun addAlertForUnit(alert: CustomFTAlert)
+    suspend fun addAlertForPolicy(alert: CustomNFTAlert)
+    suspend fun deleteAlertsForFeedWithUnit(feedFT: FeedFT)
+    suspend fun deleteAlertsForFeedWithPolicy(policy: String)
 
 }
 
@@ -100,10 +119,10 @@ class CoreDataRepo(
     private val blockFrostManager: BlockFrostManager = provideBlockFrostManager()
     private val positionsDao = database.getPositionsDao()
     private val watchlistsDao = database.getWatchListsDao()
-    private val feedFTDao = database.getFeedFTEntriesDao()
-    private val feedNFTDao = database.getFeedNFTEntriesDao()
+    private val feedFTDao = database.getFeedFTDao()
+    private val feedNFTDao = database.getFeedNFTDao()
     private val customFTAlertDao = database.getFTAlertsDao()
-    private val customNFTAlertsDao = database.getNFTAlertsDao()
+    private val customNFTAlertDao = database.getNFTAlertsDao()
 
     private fun provideTapToolsManager(): TapToolsManager {
         return TapToolsManagerImpl.Builder(
@@ -128,6 +147,10 @@ class CoreDataRepo(
 
     override val watchlistsWithPositions: List<WatchlistWithPositions>
         get() = database.getWatchListsDao().getWatchlistsWithPositions()
+    override val feedFTWithAlerts: List<FeedFTWithAlerts>
+        get() = database.getFeedFTDao().getFeedsFTWithAlerts()
+    override val feedsNFTWithAlerts: List<FeedNFTWithAlerts>
+        get() = database.getFeedNFTDao().getFeedsNFTWithAlerts()
 
     override suspend fun getClockStatus(): Result<StatusResponse> = clockManager.getStatus()
     override suspend fun resolveAdaHandle(handle: String): Result<String> =
@@ -250,6 +273,7 @@ class CoreDataRepo(
         feedFTDao.deleteByPositionUnit(unit)
     }
 
+    // todo this wont work if haveing either positionUnit, positionTokenA and positionTokenB
     override suspend fun replacePositionInFeedFT(oldUnit: String, newUnit: String) {
         feedFTDao.replaceReferencedPositionFTLocal(oldUnit, newUnit)
     }
@@ -260,6 +284,8 @@ class CoreDataRepo(
 
     override suspend fun addFeedNFT(feedNFT: FeedNFT): Boolean {
         val result = feedNFTDao.insert(feedNFT)
+        Timber.tag("wims").i("add feed result = $result")
+
         return result != -1L // Returns true if insertion was successful, false if a conflict occurred
     }
 
@@ -271,7 +297,7 @@ class CoreDataRepo(
         feedNFTDao.delete(feedNFT)
     }
 
-    override suspend fun deleteFeedNFTByolicy(policy: String) {
+    override suspend fun deleteFeedNFTByPolicy(policy: String) {
         feedNFTDao.deleteByPositionPolicy(policy)
     }
 
@@ -279,18 +305,56 @@ class CoreDataRepo(
         feedNFTDao.replaceReferencedPositionNFTLocal(oldPolicy, newPolicy)
     }
 
-    // todo add in interface first
-    suspend fun addFeedFTWithAlerts(feedFT: FeedFT, alerts: List<CustomFTAlert>) {
+    override suspend fun deleteAlert(alert: CustomFTAlert) {
+        customFTAlertDao.delete(alert)
+    }
+
+    override suspend fun deleteAlert(alert: CustomNFTAlert) {
+        customNFTAlertDao.delete(alert)
+    }
+
+    override suspend fun addAlertForUnit(alert: CustomFTAlert) {
+        customFTAlertDao.insert(alert)
+    }
+
+    override suspend fun addAlertForPolicy(alert: CustomNFTAlert) {
+        customNFTAlertDao.insert(alert)
+    }
+
+    override suspend fun deleteAlertsForFeedWithUnit(feedFT: FeedFT) {
+    // todo check
+    //customFTAlertDao.deleteAlertsForFeed(it) }
+    }
+
+    override suspend fun deleteAlertsForFeedWithPolicy(policy: String) {
+        customNFTAlertDao.deleteAlertsForFeed(policy)
+    }
+
+    override suspend fun addFeedFTWithAlerts(feedFT: FeedFT, alerts: List<CustomFTAlert>) {
         feedFTDao.insert(feedFT)
         alerts.forEach { customFTAlertDao.insert(it) }
     }
 
-    // Get a FeedFT with its alerts
-    suspend fun getFeedFTWithAlerts(positionUnit: String): FeedFTWithAlerts? {
-        val feedFT = feedFTDao.getFeedByPositionUnit(positionUnit)
+    override suspend fun getFeedFTWithAlerts(positionUnit: String): FeedFTWithAlerts? {
+        val feedFT = feedFTDao.getFeedByUnit(positionUnit)
         return if (feedFT != null) {
             val alerts = customFTAlertDao.getAlertsForFeed(positionUnit)
             FeedFTWithAlerts(feedFT, alerts)
+        } else {
+            null
+        }
+    }
+
+    override suspend fun addFeedNFTWithAlerts(feedNFT: FeedNFT, alerts: List<CustomNFTAlert>) {
+        feedNFTDao.insert(feedNFT)
+        alerts.forEach { customNFTAlertDao.insert(it) }
+    }
+
+    override suspend fun getFeedNFTWithAlerts(positionPolicy: String): FeedNFTWithAlerts? {
+        val feedNFT = feedNFTDao.getFeedByPositionPolicy(positionPolicy)
+        return if (feedNFT != null) {
+            val alerts = customNFTAlertDao.getAlertsForFeed(positionPolicy)
+            FeedNFTWithAlerts(feedNFT, alerts)
         } else {
             null
         }

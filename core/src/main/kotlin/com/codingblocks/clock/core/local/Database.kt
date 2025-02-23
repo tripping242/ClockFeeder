@@ -49,10 +49,11 @@ abstract class AppDatabase : RoomDatabase() {
 
     abstract fun getPositionsDao(): PositionsDao
     abstract fun getWatchListsDao(): WatchListsDao
-    abstract fun getFeedFTEntriesDao(): FeedFTDao
-    abstract fun getFeedNFTEntriesDao(): FeedNFTDao
+    abstract fun getFeedFTDao(): FeedFTDao
+    abstract fun getFeedNFTDao(): FeedNFTDao
     abstract fun getFTAlertsDao(): CustomFTAlertDao
     abstract fun getNFTAlertsDao(): CustomNFTAlertDao
+
 }
 
 

@@ -1,14 +1,11 @@
 package com.codingblocks.clock.ui.watchlists
 
-import android.os.Bundle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -71,10 +68,8 @@ import com.codingblocks.clock.core.local.data.PositionNFTLocal
 import com.codingblocks.clock.core.local.data.WatchListConfig
 import com.codingblocks.clock.core.local.data.WatchlistWithPositions
 import com.codingblocks.clock.core.local.data.formattedHHMM
-import com.codingblocks.clock.core.local.data.getAllPositionsFTIncludingLP
 import com.codingblocks.clock.ui.watchlists.WatchListViewModel.PositionItem
 import com.codingblocks.clock.ui.watchlists.WatchListViewModel.ShowType
-import kotlinx.coroutines.launch
 import org.koin.androidx.compose.getViewModel
 import timber.log.Timber
 import java.time.ZonedDateTime

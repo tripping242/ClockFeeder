@@ -42,6 +42,7 @@ data class FeedFT(
 data class FeedNFT(
     @PrimaryKey
     val positionPolicy: String,
+    val name: String,
     val createdAt: ZonedDateTime,
     var lastUpdatedAt: ZonedDateTime,
     var feedClockPrice: Boolean,
