@@ -200,7 +200,9 @@ fun FeedFTItem(
     var isExpanded by remember { mutableStateOf(false) }
     ExpandableCard(
         isExpanded = isExpanded,
-        onClick = { isExpanded = !isExpanded },
+        onClick = {
+            if (item.alerts.isNotEmpty()) { isExpanded = !isExpanded }
+        },
         topContent = {
             Column()
             {
