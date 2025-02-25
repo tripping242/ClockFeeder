@@ -1,18 +1,18 @@
 package com.codingblocks.clock.ui.feeds
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -27,28 +27,44 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codingblocks.clock.R
 import com.codingblocks.clock.base.ui.CheckBoxRowWithText
+import com.codingblocks.clock.base.ui.TextRowWithDoubleInputTextField
+import com.codingblocks.clock.base.ui.TextRowWithIntegerInputTextField
+import com.codingblocks.clock.base.ui.button.MultiChoiceTwoSegmentedButton
+import com.codingblocks.clock.base.ui.button.SingleChoiceSegmentedButton
 import com.codingblocks.clock.base.ui.card.ExpandableCard
+import com.codingblocks.clock.base.ui.dialog.FullWidthDialog
 import com.codingblocks.clock.base.ui.icon.AppIcon
 import com.codingblocks.clock.base.ui.scaffold.AppScaffold
-import com.codingblocks.clock.base.ui.utils.formatMax8decimals
-import com.codingblocks.clock.base.ui.utils.formatToNoDecimals
+import com.codingblocks.clock.base.ui.theme.AppTheme
+import com.codingblocks.clock.core.local.data.CustomFTAlert
+import com.codingblocks.clock.core.local.data.CustomNFTAlert
+import com.codingblocks.clock.core.local.data.FeedFT
 import com.codingblocks.clock.core.local.data.FeedFTWithAlerts
+import com.codingblocks.clock.core.local.data.FeedNFT
 import com.codingblocks.clock.core.local.data.FeedNFTWithAlerts
+import com.codingblocks.clock.core.local.data.WatchListConfig
 import com.codingblocks.clock.core.local.data.formattedHHMM
 import com.codingblocks.clock.ui.feeds.FeedsViewModel.ShowType
-import com.codingblocks.clock.ui.watchlists.ExpandableItem
+import kotlinx.collections.immutable.immutableListOf
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableSet
 import org.koin.androidx.compose.getViewModel
+import java.time.ZonedDateTime
 
 @Composable
 fun FeedsScreen(
@@ -60,6 +76,8 @@ fun FeedsScreen(
     var expandedItemIndex by remember { mutableStateOf(-1) }
     var showType by remember { mutableStateOf(FeedsViewModel.ShowType.FT) }
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var alertsDialogFeedFTItem: FeedFT? by remember { mutableStateOf(null) }
+    var alertsDialogFeedNFTItem: FeedNFT? by remember { mutableStateOf(null) }
 
     LaunchedEffect(expandedItemIndex) {
         if (expandedItemIndex != -1) parentLazyListState.animateScrollToItem(expandedItemIndex) // Smooth scroll to the item
@@ -133,6 +151,11 @@ fun FeedsScreen(
                                     )
                                 )
                             },
+                            onAddAlertClicked = {
+                                viewModel.dispatch(
+                                    FeedsViewModel.Action.AddFTAlert(it)
+                                )
+                            },
                             state = childLazyListState,
                         )
                     }
@@ -169,6 +192,11 @@ fun FeedsScreen(
                                     )
                                 )
                             },
+                            onAddAlertClicked = {
+                                viewModel.dispatch(
+                                    FeedsViewModel.Action.AddNFTAlert(it)
+                                )
+                            },
                             state = childLazyListState,
                         )
                     }
@@ -184,9 +212,218 @@ fun FeedNFTItem(
     onDeleteFeedClicked: () -> Unit,
     onFeedClockPriceChanged: () -> Unit,
     onFeedClockVolumeChanged: () -> Unit,
+    onAddAlertClicked: (CustomNFTAlert) -> Unit,
     state: LazyListState,
 ) {
-    Text(text = item.feedNFT.name)
+    var isExpanded by remember { mutableStateOf(false) }
+    var showAddDialog by remember { mutableStateOf(false) }
+
+    val optionsAlertValue = remember {
+        FeedsViewModel.AlertValue.entries.map { it.label }
+    }.toImmutableList()
+    val optionsAlertTrigger = remember {
+        FeedsViewModel.AlertTrigger.entries.map { it.label }
+    }.toImmutableList()
+    val optionsAlertType = remember {
+        FeedsViewModel.AlertType.entries.map { it.label }
+    }.toImmutableList()
+
+    if (showAddDialog) {
+        var selectedTypeSet: Set<Int> by remember { mutableStateOf(emptySet()) }
+        var selectedTriggerIndex by remember { mutableStateOf(-1) }
+        var selectedValueIndex  by remember { mutableStateOf(-1) }
+        var amount: Double? by remember { mutableStateOf(null) }
+        var volume: Int? by remember { mutableStateOf(null) }
+
+        FullWidthDialog(
+            onDismissRequest = { showAddDialog = !showAddDialog },
+            dialogContent = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White)
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.Start,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+
+                    ) {
+                    Text(
+                        text = "Add new alert for ${item.feedNFT.name}:",
+                        style = AppTheme.typography.h4,
+                    )
+                    SingleChoiceSegmentedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        options = optionsAlertValue,
+                        selected = null,
+                        onSelected = { index ->
+                            selectedValueIndex = index
+                        }
+                    )
+                    SingleChoiceSegmentedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        options = optionsAlertTrigger,
+                        selected = null,
+                        onSelected = { index ->
+                            selectedTriggerIndex = index
+                        }
+                    )
+                    MultiChoiceTwoSegmentedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        options = optionsAlertType,
+                        selectedOptions = selectedTypeSet,
+                        onSelectionChange = { newSelection ->
+                            selectedTypeSet = newSelection
+                        }
+                    )
+                    if (selectedValueIndex == 0) {
+                        TextRowWithDoubleInputTextField(
+                            text = "Trigger when price reaches:",
+                            amount = amount ?: 0.0,
+                            onAmountChanged = { newAmount ->
+                                amount = newAmount
+                            },
+                            hint = "₳",
+                        )
+                    }
+                    if (selectedValueIndex == 1) {
+                        TextRowWithIntegerInputTextField(
+                            text = "Trigger when volume reaches:",
+                            amount = volume ?: 0,
+                            onAmountChanged = { newAmount ->
+                                volume = newAmount
+                            },
+                            hint = "₳",
+                        )
+                    }
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = selectedTriggerIndex != -1 && selectedValueIndex != -1 && selectedTypeSet.isNotEmpty(),
+                        onClick = {
+                            with (item.feedNFT) {
+                                val alert: CustomNFTAlert = CustomNFTAlert(
+                                    feedPositionPolicy = positionPolicy,
+                                    ticker = name,
+                                    threshold = if (selectedValueIndex == 0) amount!! else volume!!.toDouble(),
+                                    isEnabled = true,
+                                    onlyOnce = selectedTriggerIndex == 0,
+                                    priceOrVolume = selectedValueIndex == 0,
+                                    pushAlert = selectedTypeSet.contains(0),
+                                    clockAlert = selectedTypeSet.contains(1),
+                                )
+                                onAddAlertClicked(alert)
+                                showAddDialog = false
+                            }
+                        },
+                    ) {
+                        Text(text = "ADD NFT ALERT")
+                    }
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            showAddDialog = false
+                        }
+                    ) {
+                        Text(text = "CANCEL")
+                    }
+                }
+            }
+        )
+    }
+    ExpandableCard(
+        isExpanded = isExpanded,
+        onClick = {
+            if (item.alerts.isNotEmpty()) { isExpanded = !isExpanded }
+        },
+        topContent = {
+            Column()
+            {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .padding(4.dp)
+                        .wrapContentHeight()
+                        .fillMaxWidth(),
+                ) {
+                    Text(
+                        // and maybe icon link
+                        text = item.feedNFT.name,
+                        modifier = Modifier
+                            .width(100.dp)
+                            .padding(end = 8.dp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Text(
+                        text = item.feedNFT.lastUpdatedAt.formattedHHMM(),
+                        modifier = Modifier
+                            .width(80.dp)
+                            .padding(end = 8.dp)
+                    )
+                    IconButton(
+                        onClick = onDeleteFeedClicked,
+                        modifier = Modifier,
+                    ) {
+                        AppIcon(icon = Icons.Outlined.Delete)
+                    }
+                }
+
+                CheckBoxRowWithText(
+                    modifier = Modifier
+                        .padding(4.dp)
+                        .wrapContentHeight(),
+                    text = "Show price feed on BlockClock",
+                    onCheckedChanged = { onFeedClockPriceChanged.invoke() },
+                    checkedState = item.feedNFT.feedClockPrice,
+                )
+
+                CheckBoxRowWithText(
+                    modifier = Modifier
+                        .padding(4.dp)
+                        .wrapContentHeight(),
+                    enabled = item.feedNFT.feedClockPrice,
+                    text = "also show volume indicators on BlockClock",
+                    onCheckedChanged = { onFeedClockVolumeChanged.invoke() },
+                    checkedState = item.feedNFT.feedClockVolume,
+                )
+                Row(
+                    modifier = Modifier
+                        .wrapContentHeight()
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    IconButton(
+                        onClick = {
+                            showAddDialog = true }
+                    ) {
+                        AppIcon(icon = Icons.Outlined.AddAlarm)
+                    }
+                    IconButton(
+                        enabled = item.alerts.isNotEmpty(),
+                        onClick = { isExpanded = !isExpanded },
+                        modifier = Modifier,
+                    ) {
+                        AppIcon(icon = if (isExpanded) Icons.Outlined.ArrowDropUp else Icons.Outlined.ArrowDropDown)
+                    }
+                }
+            }
+        },
+        expandedContent = {
+            val alerts = item.alerts
+            LazyColumn(
+                state = state,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 600.dp),
+            ) {
+                items(alerts)
+                { alert ->
+                    Text(text = "Alert for ${alert.ticker}")
+                }
+            }
+        },
+    )
 }
 
 @Composable
@@ -195,9 +432,123 @@ fun FeedFTItem(
     onDeleteFeedClicked: () -> Unit,
     onFeedClockPriceChanged: () -> Unit,
     onFeedClockVolumeChanged: () -> Unit,
+    onAddAlertClicked: (CustomFTAlert) -> Unit,
     state: LazyListState,
 ) {
     var isExpanded by remember { mutableStateOf(false) }
+    var showAddDialog by remember { mutableStateOf(false) }
+
+    val optionsAlertValue = remember {
+        FeedsViewModel.AlertValue.entries.map { it.label }
+    }.toImmutableList()
+    val optionsAlertTrigger = remember {
+        FeedsViewModel.AlertTrigger.entries.map { it.label }
+    }.toImmutableList()
+    val optionsAlertType = remember {
+        FeedsViewModel.AlertType.entries.map { it.label }
+    }.toImmutableList()
+
+    if (showAddDialog) {
+        var selectedTypeSet: Set<Int> by remember { mutableStateOf(emptySet()) }
+        var selectedTriggerIndex by remember { mutableStateOf(-1) }
+        var selectedValueIndex  by remember { mutableStateOf(-1) }
+        var amount: Double? by remember { mutableStateOf(null) }
+        var volume: Int? by remember { mutableStateOf(null) }
+
+        FullWidthDialog(
+            onDismissRequest = { showAddDialog = !showAddDialog },
+            dialogContent = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White)
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.Start,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+
+                    ) {
+                    Text(
+                        text = "Add new alert for ${item.feedFT.name}:",
+                        style = AppTheme.typography.h4,
+                    )
+                    SingleChoiceSegmentedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        options = optionsAlertValue,
+                        selected = null,
+                        onSelected = { index ->
+                            selectedValueIndex = index
+                        }
+                    )
+                    SingleChoiceSegmentedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        options = optionsAlertTrigger,
+                        selected = null,
+                        onSelected = { index ->
+                            selectedTriggerIndex = index
+                        }
+                    )
+                    MultiChoiceTwoSegmentedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        options = optionsAlertType,
+                        selectedOptions = selectedTypeSet,
+                        onSelectionChange = { newSelection ->
+                            selectedTypeSet = newSelection
+                        }
+                    )
+                    if (selectedValueIndex == 0) {
+                        TextRowWithDoubleInputTextField(
+                            text = "Trigger when price reaches:",
+                            amount = amount ?: 0.0,
+                            onAmountChanged = { newAmount ->
+                                amount = newAmount
+                            },
+                            hint = "₳",
+                        )
+                    }
+                    if (selectedValueIndex == 1) {
+                        TextRowWithIntegerInputTextField(
+                            text = "Trigger when volume reaches:",
+                            amount = volume ?: 0,
+                            onAmountChanged = { newAmount ->
+                                volume = newAmount
+                            },
+                            hint = "₳",
+                        )
+                    }
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = selectedTriggerIndex != -1 && selectedValueIndex != -1 && selectedTypeSet.isNotEmpty(),
+                        onClick = {
+                            with (item.feedFT) {
+                                val alert: CustomFTAlert = CustomFTAlert(
+                                    feedPositionUnit = positionUnit,
+                                    ticker = name,
+                                    threshold = if (selectedValueIndex == 0) amount!! else volume!!.toDouble(),
+                                    isEnabled = true,
+                                    onlyOnce = selectedTriggerIndex == 0,
+                                    priceOrVolume = selectedValueIndex == 0,
+                                    pushAlert = selectedTypeSet.contains(0),
+                                    clockAlert = selectedTypeSet.contains(1),
+                                )
+                                onAddAlertClicked(alert)
+                                showAddDialog = false
+                            }
+                        },
+                    ) {
+                        Text(text = "ADD FT ALERT")
+                    }
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                             showAddDialog = false
+                        }
+                    ) {
+                        Text(text = "CANCEL")
+                    }
+                }
+            }
+        )
+    }
     ExpandableCard(
         isExpanded = isExpanded,
         onClick = {
@@ -264,7 +615,7 @@ fun FeedFTItem(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     IconButton(
-                        onClick = { /*TODO*/ }
+                        onClick = { showAddDialog = true }
                     ) {
                         AppIcon(icon = Icons.Outlined.AddAlarm)
                     }
@@ -284,7 +635,7 @@ fun FeedFTItem(
                 state = state,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .wrapContentHeight()
+                    .heightIn(max = 600.dp),
             ) {
                 items(alerts)
                 { alert ->

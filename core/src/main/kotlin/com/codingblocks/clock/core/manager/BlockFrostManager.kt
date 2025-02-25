@@ -5,6 +5,7 @@ import com.codingblocks.clock.core.database.BlockFrostDatabase
 import com.codingblocks.clock.core.interceptor.BlockFrostKeyInterceptor
 import com.codingblocks.clock.core.model.blockfrost.AssetAddress
 import com.codingblocks.clock.core.model.blockfrost.BlockFrostConfig
+import com.codingblocks.clock.core.model.blockfrost.LogoConfig
 import com.codingblocks.clock.core.remote.BlockFrostApi
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +31,45 @@ interface BlockFrostManager {
     suspend fun resolveAdaHandle(handle: String): Result<String>
     suspend fun getAdaHandleAddresses(handle: String): Result<List<AssetAddress>>
     suspend fun getStakeAddress(address: String) : Result<String>
+}
+
+interface LogoManager {
+    suspend fun getLogoForUnit(unit: String)
+}
+
+class LogoManagerImpl private constructor(
+    private val context: Context,
+    private val config: LogoConfig,
+    private val okHttpClient: OkHttpClient,
+) : LogoManager {
+    class Builder(
+        private val context: Context,
+        private val config: LogoConfig,
+    ) {
+        private var okHttpClient: OkHttpClient = OkHttpClient().newBuilder().build()
+        fun setOkHttpClient(okHttpClient: OkHttpClient): Builder {
+            this.okHttpClient = okHttpClient
+            return this
+        }
+
+        fun build(): LogoManager = LogoManagerImpl(
+            context, config, okHttpClient
+        )
+    }
+
+    private val json by lazy {
+        Json {
+            ignoreUnknownKeys = true
+            explicitNulls = false
+        }
+    }
+
+    //private var api: LogoApi? = provideApi()
+
+    override suspend fun getLogoForUnit(unit: String) {
+        TODO("Not yet implemented")
+    }
+
 }
 
 class BlockFrostManagerImpl private constructor(

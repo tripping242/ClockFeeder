@@ -5,6 +5,8 @@ import at.florianschuster.control.Controller
 import at.florianschuster.control.createController
 import com.codingblocks.clock.base.control.ControllerViewModel
 import com.codingblocks.clock.core.DataRepo
+import com.codingblocks.clock.core.local.data.CustomFTAlert
+import com.codingblocks.clock.core.local.data.CustomNFTAlert
 import com.codingblocks.clock.core.local.data.FeedFT
 import com.codingblocks.clock.core.local.data.FeedFTWithAlerts
 import com.codingblocks.clock.core.local.data.FeedNFT
@@ -20,6 +22,18 @@ class FeedsViewModel(
     enum class ShowType {
         FT, NFT
     }
+    enum class AlertValue(val label: String) {
+        Price("PRICE"),
+        Volume("VOLUME")
+    }
+    enum class AlertTrigger(val label: String) {
+        Once("Only once"),
+        Volume("Every time")
+    }
+    enum class AlertType(val label: String) {
+        Push("Push notification"),
+        Clock("Alert to BLockClock")
+    }
 
     sealed class FeedItem {
         data class FT(val feedFT: FeedFT)
@@ -34,13 +48,16 @@ class FeedsViewModel(
         data class DeleteFeedNFTItem(val item: FeedNFTWithAlerts) : Action()
         data class FeedClockPriceNFTChanged(val item: FeedNFTWithAlerts) : Action()
         data class FeedClockVolumeNFTChanged(val item: FeedNFTWithAlerts) : Action()
+        data class ShowAddAlertDialog(val show: Boolean) : Action()
+        data class AddFTAlert(val alert: CustomFTAlert) : Action()
+        data class AddNFTAlert(val alert: CustomNFTAlert) : Action()
 
     }
 
     sealed class Mutation {
         data class FeedFTWithAlertsChanged(val feedsWithAlerts: List<FeedFTWithAlerts>) : Mutation()
         data class FeedNFTWithAlertsChanged(val feedsWithAlerts: List<FeedNFTWithAlerts>) : Mutation()
-
+        data class ShowAddAlertDialog(val show: Boolean) : Mutation()
         data class ErrorChanged(val errorMessage: String?) : Mutation()
     }
 
@@ -48,6 +65,7 @@ class FeedsViewModel(
         val feedFTWithAlerts: List<FeedFTWithAlerts> = emptyList(),
         val feedNFTWithAlerts: List<FeedNFTWithAlerts> = emptyList(),
         val positions: PositionsResponse? = null,
+        val showAddAlertDialog: Boolean = false,
         val error: String? = null,
     )
 
@@ -126,11 +144,39 @@ class FeedsViewModel(
                             Timber.d("could not change feedClockVolume $e")
                         }
                     }
+                    is Action.ShowAddAlertDialog -> flow {
+                        emit(Mutation.ShowAddAlertDialog(action.show))
+                    }
+
+                    is Action.AddFTAlert -> flow {
+                        try {
+                            val alert = action.alert
+                            Timber.tag("wims").i("should add alert1")
+                            dataRepo.addAlertForUnit(alert)
+                            val feedFTWithAlert = dataRepo.feedFTWithAlerts
+                            emit(Mutation.FeedFTWithAlertsChanged(feedFTWithAlert))
+                        } catch (e: Exception) {
+                            Timber.d("could not add alert $e")
+                        }
+                    }
+                    is Action.AddNFTAlert -> flow {
+                        try {
+                            val alert = action.alert
+                            dataRepo.addAlertForPolicy(alert)
+                            val feedNFTWithAlerts = dataRepo.feedsNFTWithAlerts
+                            emit(Mutation.FeedNFTWithAlertsChanged(feedNFTWithAlerts))
+                        } catch (e: Exception) {
+                            Timber.d("could not add alert $e")
+                        }
+                    }
                 }
             },
             reducer = { mutation, previousState ->
                 when (mutation) {
                     is Mutation.ErrorChanged -> previousState.copy(error = mutation.errorMessage)
+                    is Mutation.ShowAddAlertDialog -> previousState.copy(
+                        showAddAlertDialog = mutation.show
+                    )
                     is Mutation.FeedFTWithAlertsChanged -> previousState.copy(feedFTWithAlerts = mutation.feedsWithAlerts)
                     is Mutation.FeedNFTWithAlertsChanged -> previousState.copy(feedNFTWithAlerts = mutation.feedsWithAlerts)
                 }

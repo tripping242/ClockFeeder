@@ -61,6 +61,7 @@ dependencies {
     api(libs.androidx.activity.ktx)
     api(libs.androidx.compose.animation.core)
     api(libs.androidx.compose.ui.core)
+    implementation(libs.androidx.material3.android)
     debugApi(libs.androidx.compose.ui.tooling.core)
     api(libs.androidx.compose.ui.tooling.preview)
     api(libs.androidx.compose.material.icons)

@@ -25,7 +25,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.consumedWindowInsets
+//import androidx.compose.foundation.layout.consumedWindowInsets
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.rememberScaffoldState
@@ -101,7 +101,7 @@ private fun MainView() {
         ) { contentPadding ->
             Box(
                 modifier = Modifier
-                    .consumedWindowInsets(contentPadding)
+                    //.consumedWindowInsets(contentPadding)
                     .padding(contentPadding)
                     .imePadding(),
             ) {

@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import java.time.ZonedDateTime
 
 @Entity(
     tableName = "customFTAlert",
@@ -21,10 +22,16 @@ data class CustomFTAlert(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val feedPositionUnit: String, // References FeedFT.positionUnit
-    // Add other fields for the alert here
-    var alertName: String,
+    var ticker: String,
     var threshold: Double,
-    var isEnabled: Boolean
+    var isEnabled: Boolean,
+    var onlyOnce: Boolean,
+    var crossingOver: Boolean = false,
+    var priceOrVolume: Boolean,
+    var pushAlert: Boolean,
+    var clockAlert: Boolean,
+    var mail: Boolean = false,
+    var createdAt: ZonedDateTime = ZonedDateTime.now()
 )
 
 @Entity(
@@ -43,8 +50,14 @@ data class CustomNFTAlert(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val feedPositionPolicy: String, // References FeedNFT.positionPolicy
-    // Add other fields for the alert here
-    var alertName: String,
+    var ticker: String,
     var threshold: Double,
-    var isEnabled: Boolean
+    var isEnabled: Boolean,
+    var onlyOnce: Boolean,
+    var crossingOver: Boolean = false,
+    var priceOrVolume: Boolean,
+    var pushAlert: Boolean,
+    var clockAlert: Boolean,
+    var mail: Boolean = false,
+    var createdAt: ZonedDateTime = ZonedDateTime.now()
 )

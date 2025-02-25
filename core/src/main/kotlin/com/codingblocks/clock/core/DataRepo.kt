@@ -18,6 +18,10 @@
 package com.codingblocks.clock.core
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.Base64
+import android.util.LruCache
 import com.codingblocks.clock.core.local.AppDatabase
 import com.codingblocks.clock.core.local.data.CustomFTAlert
 import com.codingblocks.clock.core.local.data.CustomNFTAlert
@@ -114,6 +118,10 @@ interface DataRepo {
     suspend fun deleteAlertsForFeedWithUnit(feedFT: FeedFT)
     suspend fun deleteAlertsForFeedWithPolicy(policy: String)
 
+    // Logos
+    suspend fun getAndStoreRemoteLogo(policy: String)
+    suspend fun getLocalLogo(policy: String) : Bitmap?
+
 }
 
 class CoreDataRepo(
@@ -132,6 +140,7 @@ class CoreDataRepo(
     private val customFTAlertDao = database.getFTAlertsDao()
     private val customNFTAlertDao = database.getNFTAlertsDao()
 
+    private val memoryCache = LruCache<String, Bitmap>(200)
     private fun provideTapToolsManager(): TapToolsManager {
         return TapToolsManagerImpl.Builder(
             context, TapToolsConfig(appBuildInfo.tapToolsBaseUrl)
@@ -330,6 +339,7 @@ class CoreDataRepo(
     }
 
     override suspend fun addAlertForUnit(alert: CustomFTAlert) {
+        Timber.tag("wims").i("should add alert2")
         customFTAlertDao.insert(alert)
     }
 
@@ -344,6 +354,28 @@ class CoreDataRepo(
 
     override suspend fun deleteAlertsForFeedWithPolicy(policy: String) {
         customNFTAlertDao.deleteAlertsForFeed(policy)
+    }
+
+    override suspend fun getAndStoreRemoteLogo(policy: String) {
+        // todo load from website
+        // val bitmap = get from remote base64,
+        // then decodeBase64ToBitmap, store in TokenLogo + put in memórycache
+        //memoryCache.put(policy,bitmap)
+    }
+
+    override suspend fun getLocalLogo(policy: String): Bitmap? {
+        var resultBitmap = memoryCache.get(policy)
+        if (resultBitmap == null) {
+            resultBitmap =
+                database
+                    .getLogoDao()
+                    .getLogo(policy)
+                    ?.logoBase64?.let { it ->
+                        decodeBase64ToBitmap(it)
+                    }
+            memoryCache.put(policy, resultBitmap)
+        }
+        return resultBitmap
     }
 
     override suspend fun addFeedFTWithAlerts(feedFT: FeedFT, alerts: List<CustomFTAlert>) {
@@ -461,4 +493,14 @@ fun PositionLPLocal.tokenBToPositionFT(watchList: Int): PositionFTLocal {
         createdAt = ZonedDateTime.now(),
         lastUpdated = ZonedDateTime.now()
     )
+}
+
+fun decodeBase64ToBitmap(base64String: String): Bitmap? {
+    return try {
+        val decodedBytes = Base64.decode(base64String, Base64.DEFAULT)
+        BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
+    } catch (e: IllegalArgumentException) {
+        e.printStackTrace()
+        null
+    }
 }

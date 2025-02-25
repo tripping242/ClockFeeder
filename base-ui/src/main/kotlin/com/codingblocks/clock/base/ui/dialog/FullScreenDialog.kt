@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -26,6 +27,31 @@ fun FullScreenDialog(
     Column(
         modifier = modifier
             .fillMaxSize()
+    ) {
+        Dialog(
+            onDismissRequest = onDismissRequest,
+            // only allow dismissRequests, to be handled in calling function (are you sure)...
+            // dont close dialog on back press, as we cant show "are you sure"
+            DialogProperties(
+                usePlatformDefaultWidth = false,
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false,
+            )
+        ) {
+            dialogContent.invoke(this)
+        }
+    }
+}
+
+@Composable
+fun FullWidthDialog(
+    onDismissRequest: () -> Unit,
+    dialogContent: @Composable ColumnScope.() -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
     ) {
         Dialog(
             onDismissRequest = onDismissRequest,
