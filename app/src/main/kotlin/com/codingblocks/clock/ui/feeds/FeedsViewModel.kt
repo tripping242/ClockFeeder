@@ -50,8 +50,9 @@ class FeedsViewModel(
         data class FeedClockVolumeNFTChanged(val item: FeedNFTWithAlerts) : Action()
         data class ShowAddAlertDialog(val show: Boolean) : Action()
         data class AddFTAlert(val alert: CustomFTAlert) : Action()
+        data class DeleteFTAlert(val alert: CustomFTAlert) : Action()
         data class AddNFTAlert(val alert: CustomNFTAlert) : Action()
-
+        data class DeleteNFTAlert(val alert: CustomNFTAlert) : Action()
     }
 
     sealed class Mutation {
@@ -159,6 +160,16 @@ class FeedsViewModel(
                             Timber.d("could not add alert $e")
                         }
                     }
+                    is Action.DeleteFTAlert -> flow {
+                        try {
+                            val alert = action.alert
+                            dataRepo.deleteAlert(alert)
+                            val feedFTWithAlerts = dataRepo.feedFTWithAlerts
+                            emit(Mutation.FeedFTWithAlertsChanged(feedFTWithAlerts))
+                        } catch (e: Exception) {
+                            Timber.d("could not delete alert $e")
+                        }
+                    }
                     is Action.AddNFTAlert -> flow {
                         try {
                             val alert = action.alert
@@ -167,6 +178,17 @@ class FeedsViewModel(
                             emit(Mutation.FeedNFTWithAlertsChanged(feedNFTWithAlerts))
                         } catch (e: Exception) {
                             Timber.d("could not add alert $e")
+                        }
+                    }
+
+                    is Action.DeleteNFTAlert -> flow {
+                        try {
+                            val alert = action.alert
+                            dataRepo.deleteAlert(alert)
+                            val feedNFTWithAlerts = dataRepo.feedsNFTWithAlerts
+                            emit(Mutation.FeedNFTWithAlertsChanged(feedNFTWithAlerts))
+                        } catch (e: Exception) {
+                            Timber.d("could not delete alert $e")
                         }
                     }
                 }

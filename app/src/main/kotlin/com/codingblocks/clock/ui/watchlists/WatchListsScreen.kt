@@ -153,7 +153,7 @@ fun WatchlistsScreen(
             if (state.isLoading) {
                 CircularProgressIndicator(
                     modifier = Modifier
-                        .padding(vertical = 32.dp)
+                        .padding(32.dp)
                         .size(56.dp)
                 )
             } else {
@@ -503,6 +503,7 @@ fun AddWatchListDialog(
             horizontalArrangement = Arrangement.End,
         ) {
             resolvedAddress?.let {
+                watchListName = address
                 Text(
                     text = "valid! StakeAddress=$it",
                     style = TextStyle(fontSize = 8.sp),

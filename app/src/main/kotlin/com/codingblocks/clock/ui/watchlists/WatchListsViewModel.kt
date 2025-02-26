@@ -152,18 +152,18 @@ class WatchListViewModel(
                                     dataRepo.loadPositionsForAddress(walletAddress)
                                         .onSuccess {
                                             dataRepo.updateOrInsertPositions(watchlistNumber, it)
-                                            val updatedWatchlistsWithPositions =
-                                                dataRepo.watchlistsWithPositions
-                                            emit(
-                                                Mutation.WatchlistsWithPositionsChanged(
-                                                    updatedWatchlistsWithPositions
-                                                )
-                                            )
                                         }
                                         .onFailure {
                                             emit(Mutation.ShowAddWatchlistDialogChanged(false))
                                             emit(Mutation.ErrorChanged("could not retrieve Positions:\n$it"))
                                         }
+                                    val updatedWatchlistsWithPositions =
+                                        dataRepo.watchlistsWithPositions
+                                    emit(
+                                        Mutation.WatchlistsWithPositionsChanged(
+                                            updatedWatchlistsWithPositions
+                                        )
+                                    )
                                     emit(Mutation.ShowLoading(false))
                                 }
                             } catch (e: Exception) {

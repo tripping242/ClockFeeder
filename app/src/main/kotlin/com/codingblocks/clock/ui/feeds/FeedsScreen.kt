@@ -21,9 +21,19 @@ import androidx.compose.material.IconButton
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AddAlarm
+import androidx.compose.material.icons.outlined.AddAlert
+import androidx.compose.material.icons.outlined.Alarm
+import androidx.compose.material.icons.outlined.AlarmOff
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.ArrowDropUp
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.LooksOne
+import androidx.compose.material.icons.outlined.Loop
+import androidx.compose.material.icons.outlined.NotificationsActive
+import androidx.compose.material.icons.outlined.NotificationsOff
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.WaterfallChart
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,6 +59,8 @@ import com.codingblocks.clock.base.ui.dialog.FullWidthDialog
 import com.codingblocks.clock.base.ui.icon.AppIcon
 import com.codingblocks.clock.base.ui.scaffold.AppScaffold
 import com.codingblocks.clock.base.ui.theme.AppTheme
+import com.codingblocks.clock.base.ui.utils.formatMax8decimals
+import com.codingblocks.clock.base.ui.utils.formatToNoDecimals
 import com.codingblocks.clock.core.local.data.CustomFTAlert
 import com.codingblocks.clock.core.local.data.CustomNFTAlert
 import com.codingblocks.clock.core.local.data.FeedFT
@@ -156,6 +168,11 @@ fun FeedsScreen(
                                     FeedsViewModel.Action.AddFTAlert(it)
                                 )
                             },
+                            onDeleteAlertClicked = {
+                                viewModel.dispatch(
+                                    FeedsViewModel.Action.DeleteFTAlert(it)
+                                )
+                            },
                             state = childLazyListState,
                         )
                     }
@@ -197,6 +214,11 @@ fun FeedsScreen(
                                     FeedsViewModel.Action.AddNFTAlert(it)
                                 )
                             },
+                            onDeleteAlertClicked = {
+                                viewModel.dispatch(
+                                    FeedsViewModel.Action.DeleteNFTAlert(it)
+                                )
+                            },
                             state = childLazyListState,
                         )
                     }
@@ -213,6 +235,7 @@ fun FeedNFTItem(
     onFeedClockPriceChanged: () -> Unit,
     onFeedClockVolumeChanged: () -> Unit,
     onAddAlertClicked: (CustomNFTAlert) -> Unit,
+    onDeleteAlertClicked: (CustomNFTAlert) -> Unit,
     state: LazyListState,
 ) {
     var isExpanded by remember { mutableStateOf(false) }
@@ -329,6 +352,7 @@ fun FeedNFTItem(
             }
         )
     }
+
     ExpandableCard(
         isExpanded = isExpanded,
         onClick = {
@@ -419,7 +443,10 @@ fun FeedNFTItem(
             ) {
                 items(alerts)
                 { alert ->
-                    Text(text = "Alert for ${alert.ticker}")
+                    NFTAlertItem(
+                        item = alert,
+                        onDeleteClicked = { onDeleteAlertClicked(alert) },
+                    )
                 }
             }
         },
@@ -433,6 +460,7 @@ fun FeedFTItem(
     onFeedClockPriceChanged: () -> Unit,
     onFeedClockVolumeChanged: () -> Unit,
     onAddAlertClicked: (CustomFTAlert) -> Unit,
+    onDeleteAlertClicked: (CustomFTAlert) -> Unit,
     state: LazyListState,
 ) {
     var isExpanded by remember { mutableStateOf(false) }
@@ -639,10 +667,116 @@ fun FeedFTItem(
             ) {
                 items(alerts)
                 { alert ->
-                    Text(text = "some asert info here")
+                    FTAlertItem(
+                        item = alert,
+                        onDeleteClicked = { onDeleteAlertClicked(alert) },
+                    )
                 }
             }
         },
     )
+}
+
+@Composable
+fun NFTAlertItem(
+    item: CustomNFTAlert,
+    onDeleteClicked: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier
+            .padding(4.dp)
+            .fillMaxWidth(),
+    ) {
+        Text(
+            text = item.ticker,
+            modifier = Modifier
+                .width(100.dp)
+                .padding(end = 16.dp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        if (item.priceOrVolume) {
+            AppIcon(icon = Icons.Outlined.WaterfallChart)
+            Text(
+                text = item.threshold.formatMax8decimals()  + " ₳",
+                modifier = Modifier
+                    .width(100.dp)
+                    .padding(end = 16.dp)
+            )
+        } else {
+            AppIcon(icon = Icons.Outlined.BarChart)
+            Text(
+                text = item.threshold.formatToNoDecimals() + " ₳",
+                modifier = Modifier
+                    .width(100.dp)
+                    .padding(end = 16.dp)
+            )
+        }
+        AppIcon(icon = if (item.pushAlert) Icons.Outlined.NotificationsActive else Icons.Outlined.NotificationsOff)
+        AppIcon(icon = if (item.clockAlert) Icons.Outlined.Alarm else Icons.Outlined.AlarmOff)
+
+        IconButton(
+            onClick = onDeleteClicked,
+            modifier = Modifier
+                .padding(start = 32.dp),
+        ) {
+            AppIcon(icon = Icons.Outlined.Delete)
+        }
+    }
+}
+
+@Composable
+fun FTAlertItem(
+    item: CustomFTAlert,
+    onDeleteClicked: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier
+            .padding(4.dp)
+            .fillMaxWidth(),
+    ) {
+        Text(
+            text = item.ticker,
+            modifier = Modifier
+                .width(80.dp)
+                .padding(end = 16.dp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        if (item.priceOrVolume) {
+            AppIcon(icon = Icons.Outlined.WaterfallChart)
+            Text(
+                text = item.threshold.formatMax8decimals() + " ₳",
+                modifier = Modifier
+                    .width(80.dp)
+                    .padding(end = 8.dp)
+            )
+        } else {
+            AppIcon(icon = Icons.Outlined.BarChart)
+            Text(
+                text = item.threshold.formatToNoDecimals()  + " ₳",
+                modifier = Modifier
+                    .width(100.dp)
+                    .padding(end = 8.dp)
+            )
+        }
+        AppIcon(icon = if (item.pushAlert) Icons.Outlined.NotificationsActive else Icons.Outlined.NotificationsOff)
+        AppIcon(icon = if (item.clockAlert) Icons.Outlined.Alarm else Icons.Outlined.AlarmOff)
+
+        IconButton(
+            onClick = onDeleteClicked,
+            modifier = Modifier
+                .padding(start = 32.dp),
+        ) {
+            AppIcon(icon = Icons.Outlined.Delete)
+        }
+    }
 
 }
+

@@ -17,6 +17,7 @@
 
 package com.codingblocks.clock.core.remote
 
+import com.codingblocks.clock.core.model.taptools.AssetResponse
 import com.codingblocks.clock.core.model.taptools.PositionsResponse
 import retrofit2.Response
 import retrofit2.http.GET
@@ -27,4 +28,9 @@ interface TapToolsApi {
     suspend fun getPositionsForAddress(
         @Query("address") address: String
     ): Response<PositionsResponse>
+
+    @GET("nft/collection/assets")
+    suspend fun getAssetsForPolicy(
+        @Query("policy") policy: String
+    ): Response<AssetResponse>
 }
