@@ -18,9 +18,14 @@
 package com.codingblocks.clock.core.remote
 
 import com.codingblocks.clock.core.model.taptools.AssetResponse
+import com.codingblocks.clock.core.model.taptools.InfoResponse
+import com.codingblocks.clock.core.model.taptools.NFTStatsResponse
 import com.codingblocks.clock.core.model.taptools.PositionsResponse
+import com.codingblocks.clock.core.model.taptools.TokenRequest
 import retrofit2.Response
+import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.POST
 import retrofit2.http.Query
 
 interface TapToolsApi {
@@ -33,4 +38,23 @@ interface TapToolsApi {
     suspend fun getAssetsForPolicy(
         @Query("policy") policy: String
     ): Response<AssetResponse>
+
+    // use below to add logo ifps links n a policy, unit to logo table
+    @GET("nft/collection/info")
+    suspend fun getInfoForPolicy(
+        @Query("policy") policy: String
+    ): Response<InfoResponse>
+
+    // use to get prices and volume info every x minutes 5 = 288 per day...
+    @GET("nft/collection/stats")
+    suspend fun getStatsForPolicy(
+        @Query("policy") policy: String
+    ): Response<NFTStatsResponse>
+
+    @POST("token/prices")
+    suspend fun getTokenPrices(
+        @Body tokenRequest: List<String>): Response<Map<String, Double>>
+
+
+
 }

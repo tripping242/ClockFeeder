@@ -203,10 +203,22 @@ class WatchListViewModel(
                     }
 
                     is Action.ReloadPositions -> flow {
-                        // to let reload button change in crcular progress indicator
                         action.walletAdress?.let { walletAddress ->
                             emit(Mutation.ShowReloading(action.watchListNumber))
                             dataRepo.loadPositionsForAddress(walletAddress).onSuccess {
+                                val unitList = it.positionsFt.map { it.unit }
+                                dataRepo.getFreshPricesForTokens(unitList)
+                                    .onSuccess { tokenPrices ->
+                                        Timber.tag("wims").i("got price info")
+                                        for ((policyHex, price) in tokenPrices) {
+                                            Timber.tag("wims").i("Policy: $policyHex, Price: $price")
+                                        }
+                                    }
+                                    .onFailure {
+                                        Timber.tag("wims").i("could not retreive price info")
+
+                                    }
+
                                 dataRepo.updateOrInsertPositions(action.watchListNumber, it)
                                 val updatedWatchlistsWithPositions =
                                     dataRepo.watchlistsWithPositions

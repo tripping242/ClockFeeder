@@ -5,9 +5,11 @@ import com.codingblocks.clock.core.database.TapToolsDatabase
 import com.codingblocks.clock.core.interceptor.TapToolsKeyInterceptor
 import com.codingblocks.clock.core.model.taptools.PositionsResponse
 import com.codingblocks.clock.core.model.taptools.TapToolsConfig
+import com.codingblocks.clock.core.model.taptools.TokenRequest
 import com.codingblocks.clock.core.remote.TapToolsApi
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
@@ -22,6 +24,7 @@ import kotlin.coroutines.cancellation.CancellationException
 interface TapToolsManager {
     fun updateApiKey(key: String?)
     suspend fun getPositionsForAddress(address: String) : Result<PositionsResponse>
+    suspend fun getPricesForTokens(list: List<String>) : Result<Map<String, Double>>
 }
 
 class TapToolsManagerImpl private constructor(
@@ -64,6 +67,10 @@ class TapToolsManagerImpl private constructor(
 
     override suspend fun getPositionsForAddress(address: String): Result<PositionsResponse> = safeCall(api) {
         getPositionsForAddress(address)
+    }
+
+    override suspend fun getPricesForTokens(list: List<String>): Result<Map<String, Double>> = safeCall(api) {
+        getTokenPrices(list)
     }
 
     private fun provideApi(key: String?): TapToolsApi? {

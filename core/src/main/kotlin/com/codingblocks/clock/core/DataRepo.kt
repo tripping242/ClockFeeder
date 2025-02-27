@@ -122,6 +122,8 @@ interface DataRepo {
     suspend fun getAndStoreRemoteLogo(policy: String)
     suspend fun getLocalLogo(policy: String) : Bitmap?
 
+    // prices
+    suspend fun getFreshPricesForTokens(list: List<String>) : Result<Map<String, Double>>
 }
 
 class CoreDataRepo(
@@ -377,6 +379,9 @@ class CoreDataRepo(
         }
         return resultBitmap
     }
+
+    override suspend fun getFreshPricesForTokens(list: List<String>) =
+        tapToolsManager.getPricesForTokens(list)
 
     override suspend fun addFeedFTWithAlerts(feedFT: FeedFT, alerts: List<CustomFTAlert>) {
         feedFTDao.insert(feedFT)
