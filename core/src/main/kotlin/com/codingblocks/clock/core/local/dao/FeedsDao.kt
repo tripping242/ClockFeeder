@@ -29,6 +29,9 @@ interface FeedFTDao {
     @Query("SELECT * FROM feedFT ORDER by lastUpdatedAt DESC")
     suspend fun getAllFeedFT(): List<FeedFT>
 
+    @Query("SELECT DISTINCT positionUnit FROM feedFT")
+    fun getAllFTUnitsFromFeed(): List<String>
+
     @Query("DELETE FROM feedFT WHERE positionUnit = :unit")
     suspend fun deleteByPositionUnit(unit: String)
 
@@ -53,6 +56,9 @@ interface FeedNFTDao {
 
     @Query("SELECT * FROM feedNFT ORDER by lastUpdatedAt DESC")
     suspend fun getAllFeedNFT(): List<FeedNFT>
+
+    @Query("SELECT DISTINCT positionPolicy FROM feedNFT")
+    fun getAllNFTPoliciesFromFeed(): List<String>
 
     @Query("DELETE FROM feedNFT WHERE positionPolicy = :policy")
     suspend fun deleteByPositionPolicy(policy: String)

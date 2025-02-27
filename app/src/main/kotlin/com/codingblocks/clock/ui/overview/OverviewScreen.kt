@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -14,6 +15,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codingblocks.clock.R
 import com.codingblocks.clock.base.ui.scaffold.AppScaffold
 import com.codingblocks.clock.base.ui.theme.AppTheme
+import com.codingblocks.clock.ui.feeds.FeedsViewModel
 import org.koin.androidx.compose.getViewModel
 
 @Composable
@@ -22,6 +24,10 @@ fun OverviewScreen(
     onListElementClicked: (id: Int) -> Unit,
 ) {
     val viewModelState by viewModel.state.collectAsStateWithLifecycle()
+
+    LaunchedEffect(viewModel) {
+        viewModel.dispatch(OverviewViewModel.Action.Initialize)
+    }
 
     OverviewView(
         title = stringResource(id = R.string.app_name),
@@ -43,6 +49,7 @@ private fun OverviewView(title: String, onListElementClicked: (id: Int) -> Unit)
                 style = AppTheme.typography.h4
             )
         }
+
         /*LazyColumn(
             modifier = Modifier.padding(contentPadding),
         ) {

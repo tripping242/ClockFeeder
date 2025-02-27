@@ -13,9 +13,11 @@ import java.time.ZonedDateTime
 
 @Dao
 interface PositionsDao {
-    // FT Positions, ticker is the name, fingerprint is unique
     @Query("SELECT * FROM positionFT WHERE watchList = :watchlistNumber ORDER by adaValue DESC")
     fun getAllFTPositions(watchlistNumber: Int): List<PositionFTLocal>
+
+    @Query("SELECT DISTINCT ticker FROM positionFT")
+    fun getAllFTUnitsFromPositions(): List<String>
 
     @Query("SELECT * FROM positionFT WHERE unit = :unit AND watchList = :watchList")
     fun getFTPositionsByUnit(unit: String, watchList: Int): PositionFTLocal?
@@ -55,6 +57,9 @@ interface PositionsDao {
 
     @Query("SELECT * FROM positionNFT WHERE watchList = :watchlistNumber ORDER by adaValue DESC")
     fun getAllNFTPositions(watchlistNumber: Int): List<PositionNFTLocal>
+
+    @Query("SELECT DISTINCT policy FROM positionNFT")
+    fun getAllNFTPoliciesFromPositions(): List<String>
 
     @Query("SELECT * FROM positionNFT WHERE policy = :policy AND watchList = :watchList")
     fun getNFTPositionByPolicy(policy: String, watchList: Int): PositionNFTLocal?

@@ -465,7 +465,6 @@ fun AddWatchListDialog(
         verticalArrangement = Arrangement.spacedBy(16.dp),
 
     ) {
-        Timber.tag("wims").i("duplicateAddress $duplicateAddress, duplicateName $duplicateName, addError: $addError  ")
 
         Text(
             text = "Add new Watchlist from wallet:",

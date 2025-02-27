@@ -22,13 +22,23 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Base64
 import android.util.LruCache
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequest
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.codingblocks.clock.core.local.AppDatabase
+import com.codingblocks.clock.core.local.dao.NFTStatsDao
 import com.codingblocks.clock.core.local.data.CustomFTAlert
 import com.codingblocks.clock.core.local.data.CustomNFTAlert
+import com.codingblocks.clock.core.local.data.FTPriceEntity
 import com.codingblocks.clock.core.local.data.FeedFT
 import com.codingblocks.clock.core.local.data.FeedFTWithAlerts
 import com.codingblocks.clock.core.local.data.FeedNFT
 import com.codingblocks.clock.core.local.data.FeedNFTWithAlerts
+import com.codingblocks.clock.core.local.data.NFTStatsEntity
 import com.codingblocks.clock.core.local.data.PositionFTLocal
 import com.codingblocks.clock.core.local.data.PositionLPLocal
 import com.codingblocks.clock.core.local.data.PositionNFTLocal
@@ -48,16 +58,24 @@ import com.codingblocks.clock.core.model.taptools.PositionsLp
 import com.codingblocks.clock.core.model.taptools.PositionsNft
 import com.codingblocks.clock.core.model.taptools.PositionsResponse
 import com.codingblocks.clock.core.model.taptools.TapToolsConfig
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import timber.log.Timber
 import java.time.ZonedDateTime
+import java.util.concurrent.TimeUnit
 
 interface DataRepo {
     val watchlistsWithPositions: List<WatchlistWithPositions>
     val feedFTWithAlerts: List<FeedFTWithAlerts>
     val feedsNFTWithAlerts: List<FeedNFTWithAlerts>
 
-    // Blockclock
+    // worker with price retrieval and storage
+    fun schedulePeriodicFetching()
+    fun cancelPeriodicFetching()
+    fun scheduleNFTAlertWorker()
+
+    // BlockClock
     suspend fun getClockStatus(): Result<StatusResponse>
 
     // wallet with address
@@ -118,12 +136,15 @@ interface DataRepo {
     suspend fun deleteAlertsForFeedWithUnit(feedFT: FeedFT)
     suspend fun deleteAlertsForFeedWithPolicy(policy: String)
 
+    suspend fun getAllEnabledAlerts():  List<CustomNFTAlert>
     // Logos
     suspend fun getAndStoreRemoteLogo(policy: String)
-    suspend fun getLocalLogo(policy: String) : Bitmap?
+    suspend fun getLocalLogo(policy: String): Bitmap?
 
     // prices
-    suspend fun getFreshPricesForTokens(list: List<String>) : Result<Map<String, Double>>
+    suspend fun getAndStorePricesForTokens()
+    suspend fun getAndStorePricesForPolicies()
+    suspend fun getLatestStatsForPolicy(policy: String): List<NFTStatsEntity>
 }
 
 class CoreDataRepo(
@@ -131,16 +152,80 @@ class CoreDataRepo(
     private val database: AppDatabase,
     private val okHttpClient: OkHttpClient,
     private val appBuildInfo: AppBuildInfo,
+    private val workManager: WorkManager,
 ) : DataRepo {
     private val tapToolsManager: TapToolsManager = provideTapToolsManager()
     private val clockManager: ClockManager = provideClockManager()
     private val blockFrostManager: BlockFrostManager = provideBlockFrostManager()
+
     private val positionsDao = database.getPositionsDao()
     private val watchlistsDao = database.getWatchListsDao()
     private val feedFTDao = database.getFeedFTDao()
     private val feedNFTDao = database.getFeedNFTDao()
     private val customFTAlertDao = database.getFTAlertsDao()
     private val customNFTAlertDao = database.getNFTAlertsDao()
+    private val nftStatsDao = database.getNFTStatsDao()
+    private val ftPriceDao = database.getFTPriceDao()
+
+    var fetchDelay: Long = 1 // todo move to settings
+
+    override fun schedulePeriodicFetching() {
+        Timber.tag("wims").i("schedulePeriodicFetching")
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val immediateWorkRequest = OneTimeWorkRequestBuilder<FetchPricesWorker>().build()
+
+        workManager.enqueue(immediateWorkRequest)
+
+        // Create a periodic work request
+        val fetchWorkRequest: PeriodicWorkRequest =
+            PeriodicWorkRequestBuilder<FetchPricesWorker>(
+                fetchDelay, TimeUnit.MINUTES
+            )
+                .setConstraints(constraints)
+                .build()
+
+        workManager.enqueueUniquePeriodicWork(
+            "FetchPricesWork",
+            ExistingPeriodicWorkPolicy.UPDATE,
+            fetchWorkRequest
+        )
+    }
+
+    override fun cancelPeriodicFetching() {
+        workManager.cancelUniqueWork("FetchPricesWork")
+    }
+
+    override fun scheduleNFTAlertWorker() {
+        Timber.tag("wims").i("scheduleNFTAlertWorker")
+
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val workRequest: PeriodicWorkRequest =
+        PeriodicWorkRequestBuilder<NFTAlertWorker>(
+            fetchDelay, TimeUnit.MINUTES
+        )
+            .setConstraints(constraints)
+            .build()
+
+        workManager.enqueueUniquePeriodicWork(
+            "NFTAlertWorker",
+            ExistingPeriodicWorkPolicy.UPDATE,
+            workRequest
+        )
+    }
+
+    // use this from settings
+    fun updateFetchDelay(newDelay: Long) {
+        fetchDelay = newDelay
+        cancelPeriodicFetching() // Cancel the existing work
+        schedulePeriodicFetching() // Reschedule with the new delay
+    }
+
 
     private val memoryCache = LruCache<String, Bitmap>(200)
     private fun provideTapToolsManager(): TapToolsManager {
@@ -293,9 +378,7 @@ class CoreDataRepo(
     }
 
     override suspend fun addFeedFT(feedFT: FeedFT): Boolean {
-        Timber.tag("wims").i("add feed")
         val result = feedFTDao.insert(feedFT)
-        Timber.tag("wims").i("add feed result = $result")
         return result != -1L // Returns true if insertion was successful, false if a conflict occurred
     }
 
@@ -341,7 +424,6 @@ class CoreDataRepo(
     }
 
     override suspend fun addAlertForUnit(alert: CustomFTAlert) {
-        Timber.tag("wims").i("should add alert2")
         customFTAlertDao.insert(alert)
     }
 
@@ -357,6 +439,9 @@ class CoreDataRepo(
     override suspend fun deleteAlertsForFeedWithPolicy(policy: String) {
         customNFTAlertDao.deleteAlertsForFeed(policy)
     }
+
+    override suspend fun getAllEnabledAlerts() =
+        customNFTAlertDao.getAllEnabledAlerts()
 
     override suspend fun getAndStoreRemoteLogo(policy: String) {
         // todo load from website
@@ -380,8 +465,66 @@ class CoreDataRepo(
         return resultBitmap
     }
 
-    override suspend fun getFreshPricesForTokens(list: List<String>) =
-        tapToolsManager.getPricesForTokens(list)
+    override suspend fun getAndStorePricesForTokens() {
+        withContext(Dispatchers.IO) {
+            Timber.d("retrieving token price info")
+            try {
+                val unitList = feedFTDao.getAllFTUnitsFromFeed()
+                tapToolsManager.getPricesForTokens(unitList)
+                    .onSuccess { tokenPrices ->
+                        val priceList = tokenPrices.map { (unit, price) ->
+                            FTPriceEntity(
+                                unit = unit,
+                                price = price,
+                            )
+                        }
+                        ftPriceDao.insertAll(priceList)
+                    }
+                    .onFailure {
+                        Timber.d("could not retreive price info $it")
+                    }
+
+            } catch (e: Exception) {
+                Timber.d("Error fetching prices for tokens ${e.message}")
+            }
+        }
+    }
+
+    override suspend fun getAndStorePricesForPolicies() {
+        withContext(Dispatchers.IO) {
+            Timber.d("retrieving NFT price info")
+            val policies = feedNFTDao.getAllNFTPoliciesFromFeed()
+            policies.forEach { policy ->
+                try {
+                    tapToolsManager.getStatsForPolicy(policy)
+                        .onSuccess { result ->
+                            // Convert the response to an entity and store it in the database
+                            Timber.tag("wims").i("adding NFTStatsEntity for $policy")
+                            val nftStatsEntity = NFTStatsEntity(
+                                policy = policy,
+                                listings = result.listings,
+                                owners = result.owners,
+                                price = result.price,
+                                sales = result.sales,
+                                supply = result.supply,
+                                topOffer = result.topOffer,
+                                volume = result.volume
+                            )
+                            nftStatsDao.insert(nftStatsEntity)
+                        }
+                        .onFailure {
+                            Timber.d("Error fetching stats for $policy: ${it.message}")
+                        }
+                } catch (e: Exception) {
+                    // Handle errors (e.g., log or retry)
+                    Timber.d("Error fetching stats for policy $policy: ${e.message}")
+                }
+            }
+        }
+    }
+
+    override suspend fun getLatestStatsForPolicy(policy: String): List<NFTStatsEntity> =
+        nftStatsDao.getLatestStatsForPolicy(policy, 2)
 
     override suspend fun addFeedFTWithAlerts(feedFT: FeedFT, alerts: List<CustomFTAlert>) {
         feedFTDao.insert(feedFT)

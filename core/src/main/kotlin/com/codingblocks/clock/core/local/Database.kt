@@ -22,15 +22,19 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.codingblocks.clock.core.local.dao.CustomFTAlertDao
 import com.codingblocks.clock.core.local.dao.CustomNFTAlertDao
+import com.codingblocks.clock.core.local.dao.FTPriceDao
 import com.codingblocks.clock.core.local.dao.FeedFTDao
 import com.codingblocks.clock.core.local.dao.FeedNFTDao
+import com.codingblocks.clock.core.local.dao.NFTStatsDao
 import com.codingblocks.clock.core.local.dao.PositionsDao
 import com.codingblocks.clock.core.local.dao.TokenLogoDao
 import com.codingblocks.clock.core.local.dao.WatchListsDao
 import com.codingblocks.clock.core.local.data.CustomFTAlert
 import com.codingblocks.clock.core.local.data.CustomNFTAlert
+import com.codingblocks.clock.core.local.data.FTPriceEntity
 import com.codingblocks.clock.core.local.data.FeedFT
 import com.codingblocks.clock.core.local.data.FeedNFT
+import com.codingblocks.clock.core.local.data.NFTStatsEntity
 import com.codingblocks.clock.core.local.data.PositionFTLocal
 import com.codingblocks.clock.core.local.data.PositionLPLocal
 import com.codingblocks.clock.core.local.data.PositionNFTLocal
@@ -39,7 +43,7 @@ import com.codingblocks.clock.core.local.data.WatchListConfig
 
 
 @Database(
-    entities = [PositionFTLocal::class, PositionNFTLocal::class, PositionLPLocal::class, WatchListConfig::class, FeedFT:: class, FeedNFT::class, CustomFTAlert::class, CustomNFTAlert::class, TokenLogo::class],
+    entities = [PositionFTLocal::class, PositionNFTLocal::class, PositionLPLocal::class, WatchListConfig::class, FeedFT:: class, FeedNFT::class, CustomFTAlert::class, CustomNFTAlert::class, TokenLogo::class, NFTStatsEntity::class, FTPriceEntity::class],
     version = 4,
     exportSchema = false
 )
@@ -56,6 +60,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun getFTAlertsDao(): CustomFTAlertDao
     abstract fun getNFTAlertsDao(): CustomNFTAlertDao
     abstract fun getLogoDao(): TokenLogoDao
+    abstract fun getNFTStatsDao(): NFTStatsDao
+    abstract fun getFTPriceDao(): FTPriceDao
 
 }
 

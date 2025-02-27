@@ -137,6 +137,7 @@ android {
 dependencies {
     implementation(project(":core"))
     implementation(project(":base-ui"))
+    implementation("io.insert-koin:koin-androidx-workmanager:3.5.0")
 
     testImplementation(libs.junit)
     testImplementation(libs.koin.test)

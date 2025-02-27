@@ -22,12 +22,18 @@ import at.florianschuster.control.Controller
 import at.florianschuster.control.createController
 import com.codingblocks.clock.base.control.ControllerViewModel
 import com.codingblocks.clock.core.DataRepo
+import com.codingblocks.clock.ui.feeds.FeedsViewModel.Action
+import com.codingblocks.clock.ui.feeds.FeedsViewModel.Mutation
+import kotlinx.coroutines.flow.flow
+import timber.log.Timber
 
 class OverviewViewModel(
     private val dataRepo: DataRepo,
 ) : ControllerViewModel<OverviewViewModel.Action, OverviewViewModel.State>() {
 
-    sealed class Action
+    sealed class Action {
+        data object Initialize : Action()
+    }
 
     sealed class Mutation
 
@@ -36,5 +42,22 @@ class OverviewViewModel(
     override val controller: Controller<Action, State> =
         viewModelScope.createController<Action, Mutation, State>(
             initialState = State,
+            mutator = { action ->
+                when (action) {
+                    Action.Initialize -> flow {
+                        try {
+                            // todo update all poistions on starting
+                            // progress indicator while doing so
+
+                            // start getting price info
+                            dataRepo.schedulePeriodicFetching()
+                            dataRepo.scheduleNFTAlertWorker()
+
+                        } catch (e: Exception) {
+                            Timber.d("could not start workers feeds $e")
+                        }
+                    }
+                }
+            }
         )
 }

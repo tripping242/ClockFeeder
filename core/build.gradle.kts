@@ -54,6 +54,8 @@ dependencies {
     implementation(libs.square.retrofit.core)
     implementation(libs.square.retrofit.converter.scalars)
     implementation(libs.io.github.rburgst)
+    implementation(libs.work.runtime.ktx)
+    implementation("io.insert-koin:koin-androidx-workmanager:3.5.0")
 
     testImplementation(libs.junit)
     testImplementation(libs.koin.test)

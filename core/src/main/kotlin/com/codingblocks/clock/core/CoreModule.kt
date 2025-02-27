@@ -17,12 +17,17 @@
 
 package com.codingblocks.clock.core
 
+import android.content.Context
 import androidx.room.Room
+import androidx.work.WorkManager
 import com.codingblocks.clock.core.local.AppDatabase
 import com.codingblocks.clock.core.model.AppBuildInfo
 import com.codingblocks.clock.core.remote.remoteModule
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import org.koin.android.ext.koin.androidContext
+import org.koin.androidx.workmanager.dsl.worker
+import org.koin.androidx.workmanager.dsl.workerOf
 import org.koin.dsl.module
 
 internal val coreModule = module {
@@ -41,6 +46,8 @@ internal val coreModule = module {
     }
 
     single { get<AppDatabase>().getPositionsDao() }
+    single { WorkManager.getInstance(androidContext()) }
+
 
     single<DataRepo> {
         CoreDataRepo(
@@ -48,8 +55,12 @@ internal val coreModule = module {
             database = get(),
             okHttpClient = get(),
             appBuildInfo = get(),
+            workManager = get(),
         )
     }
+
+    workerOf(::FetchPricesWorker)
+    workerOf(::NFTAlertWorker)
 }
 
 val coreModules = listOf(coreModule, remoteModule)

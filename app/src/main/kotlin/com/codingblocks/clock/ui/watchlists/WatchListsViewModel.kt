@@ -116,14 +116,12 @@ class WatchListViewModel(
                         emit(Mutation.ErrorAddWatchListDuplicateName(null))
                         emit(Mutation.ErrorAddWatchListDuplicateName(null))
                         val newWatchlistConfig = action.config
-                        Timber.tag("wims").i("revieved wathclist ${newWatchlistConfig}")
                         // check if name already taken or watchlist with this stakeAddress already exists
                         val existingWatchlistConfig = dataRepo.findWatchlistWithAddressOrName(
                             newWatchlistConfig.walletAddress,
                             newWatchlistConfig.name
                         )
                         if (existingWatchlistConfig != null) {
-                            Timber.tag("wims").i("already exists")
                             if (existingWatchlistConfig.walletAddress == newWatchlistConfig.walletAddress) {
                                 emit(Mutation.ResolvedAddressChanged(null))
                                 emit(Mutation.ErrorAddWatchListDuplicateAddress("You already have a watchlist with this stakeAddress: ${existingWatchlistConfig.name}"))
@@ -143,7 +141,6 @@ class WatchListViewModel(
                                         walletAddress = walletAddress
                                     )
                                 }
-                                Timber.tag("wims").i("added config")
                                 emit(Mutation.ShowAddWatchlistDialogChanged(false))
                                 emit(Mutation.EnteredAddressChanged(""))
                                 emit(Mutation.ResolvedAddressChanged(null))
@@ -206,19 +203,6 @@ class WatchListViewModel(
                         action.walletAdress?.let { walletAddress ->
                             emit(Mutation.ShowReloading(action.watchListNumber))
                             dataRepo.loadPositionsForAddress(walletAddress).onSuccess {
-                                val unitList = it.positionsFt.map { it.unit }
-                                dataRepo.getFreshPricesForTokens(unitList)
-                                    .onSuccess { tokenPrices ->
-                                        Timber.tag("wims").i("got price info")
-                                        for ((policyHex, price) in tokenPrices) {
-                                            Timber.tag("wims").i("Policy: $policyHex, Price: $price")
-                                        }
-                                    }
-                                    .onFailure {
-                                        Timber.tag("wims").i("could not retreive price info")
-
-                                    }
-
                                 dataRepo.updateOrInsertPositions(action.watchListNumber, it)
                                 val updatedWatchlistsWithPositions =
                                     dataRepo.watchlistsWithPositions
@@ -275,9 +259,7 @@ class WatchListViewModel(
                         emit(Mutation.ErrorChanged(null))
                         val updatePosition = dataRepo.getFTPositionBy(action.unit, action.watchList)
                         var shouldUpdatePosition = true
-                        Timber.tag("wims").i("updatePosition ${updatePosition?.ticker}")
                         if (updatePosition != null) {
-                            Timber.tag("wims").i("should add feed")
                             val feedAdded = dataRepo.addFeedFT(
                                 FeedFT(
                                     updatePosition.unit,
@@ -300,9 +282,6 @@ class WatchListViewModel(
                                 val tokenToAdd = if (tokenA == action.unit) tokenA else tokenB
                                 val tokenToAddName =
                                     if (tokenA == action.unit) tokenAName else tokenBName
-                                Timber.tag("wims")
-                                    .i("tokenToAddName $tokenToAddName tokenToAdd ${tokenToAdd} ")
-                                Timber.tag("wims").i("should add feed")
                                 val feedAdded = dataRepo.addFeedFT(
                                     FeedFT(
                                         tokenToAdd,
@@ -371,15 +350,11 @@ class WatchListViewModel(
                         val updatePositionFtFromLP =
                             dataRepo.getLPPositionByUnit(action.unit, action.watchList)
                         if (updatePositionFtFromLP != null) with(updatePositionFtFromLP) {
-                            Timber.tag("wims").i("updatePositionFTfromLP ${updatePositionFtFromLP}")
 
                             // check if we found tokenA or tokenB
                             val tokenToAdd = if (tokenA == action.unit) tokenA else tokenB
                             val tokenToAddName =
                                 if (tokenA == action.unit) tokenAName else tokenBName
-                            Timber.tag("wims")
-                                .i("tokenToAddName $tokenToAddName tokenToAdd ${tokenToAdd} ")
-                            Timber.tag("wims").i("should add feed")
                             val feedAdded = dataRepo.addFeedFT(
                                 FeedFT(
                                     tokenToAdd,
@@ -392,16 +367,12 @@ class WatchListViewModel(
                             )
                             shouldUpdatePosition = feedAdded
                             if (shouldUpdatePosition) {
-                                Timber.tag("wims")
-                                    .i("changed, now size is ${dataRepo.getAllFeedFT().size}")
                                 dataRepo.updateAllFTAndLPPositionsShowFeed(unit, true)
                             }
                         }
                         else {
                             shouldUpdatePosition = false
                         }
-                        Timber.tag("wims")
-                            .i("should update updatedWatchlistsWithPositions $shouldUpdatePosition")
                         if (shouldUpdatePosition) {
                             val updatedWatchlistsWithPositions =
                                 dataRepo.watchlistsWithPositions

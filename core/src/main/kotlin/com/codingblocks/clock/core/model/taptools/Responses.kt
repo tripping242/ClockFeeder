@@ -6,11 +6,11 @@ import kotlinx.serialization.Serializable
 data class NFTStatsResponse (
     val listings: Int,
     val owners: Int,
-    val price: Int,
-    val sales: Int,
+    val price: Double,
+    val sales: Double,
     val supply: Int,
-    val topOffer: Int,
-    val volume: Int,
+    val topOffer: Double,
+    val volume: Double,
 )
 
 @Serializable

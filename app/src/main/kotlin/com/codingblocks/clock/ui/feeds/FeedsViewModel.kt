@@ -152,7 +152,6 @@ class FeedsViewModel(
                     is Action.AddFTAlert -> flow {
                         try {
                             val alert = action.alert
-                            Timber.tag("wims").i("should add alert1")
                             dataRepo.addAlertForUnit(alert)
                             val feedFTWithAlert = dataRepo.feedFTWithAlerts
                             emit(Mutation.FeedFTWithAlertsChanged(feedFTWithAlert))

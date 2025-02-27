@@ -42,4 +42,8 @@ interface CustomNFTAlertDao {
 
     @Query("DELETE FROM customNFTAlert WHERE feedPositionPolicy = :positionPolicy")
     suspend fun deleteAlertsForFeed(positionPolicy: String)
+
+    @Query("SELECT * FROM CustomNFTAlert WHERE isEnabled = 1")
+    suspend fun getAllEnabledAlerts(): List<CustomNFTAlert>
+
 }

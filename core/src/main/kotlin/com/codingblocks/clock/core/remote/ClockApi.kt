@@ -64,8 +64,4 @@ interface ClockApi {
         @Query("pair") pair: String,
         @Query("omit_line") omitLine: Int?,
         ): ResponseBody
-
-
-
-
 }

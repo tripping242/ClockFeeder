@@ -21,6 +21,7 @@ import android.app.Application
 import com.codingblocks.clock.core.coreModules
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
+import org.koin.androidx.workmanager.koin.workManagerFactory
 import org.koin.core.context.startKoin
 import org.koin.core.logger.Level
 import timber.log.Timber
@@ -36,6 +37,7 @@ class ClockFeederApp : Application() {
             androidLogger(Level.ERROR)
             androidContext(this@ClockFeederApp)
             modules(coreModules + appModules)
+            workManagerFactory()
         }
     }
 }
