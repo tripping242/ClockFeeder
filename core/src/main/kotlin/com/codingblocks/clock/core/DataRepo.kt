@@ -205,6 +205,10 @@ class CoreDataRepo(
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
+        val immediateWorkRequest = OneTimeWorkRequestBuilder<NFTAlertWorker>().build()
+
+        workManager.enqueue(immediateWorkRequest)
+
         val workRequest: PeriodicWorkRequest =
         PeriodicWorkRequestBuilder<NFTAlertWorker>(
             fetchDelay, TimeUnit.MINUTES

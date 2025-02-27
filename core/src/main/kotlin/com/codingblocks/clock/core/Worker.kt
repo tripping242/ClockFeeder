@@ -40,6 +40,7 @@ class NFTAlertWorker(
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
+        Timber.tag("wims").i("NFTAlertWorker doWork")
         return withContext(Dispatchers.IO) {
             try {
                 // Fetch all enabled alerts
@@ -47,10 +48,13 @@ class NFTAlertWorker(
 
                 // Process each alert
                 alerts.forEach { alert ->
+                    Timber.tag("wims").i("check for alert: ${alert.ticker} ${alert.threshold} and priceOrVolume ${alert.priceOrVolume}")
+
                     // Fetch the latest two stats entries for the policy
                     val stats = dataRepo.getLatestStatsForPolicy(alert.feedPositionPolicy)
-
+                    Timber.tag("wims").i("stats.size == ${stats.size}")
                     if (stats.size == 2) {
+
                         val previousStat = stats[1]
                         val currentStat = stats[0]
 
