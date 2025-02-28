@@ -28,7 +28,6 @@ class FeedCycler(
                 if (!isPaused) {
                     val items = dataRepo.getAllFeedToClockItems()
                     Timber.tag("wims").i("dataRepo.getAllFeedToClockItems() returns ${items.size} items")
-
                     if (items.isNotEmpty()) {
                         val item = items[0]
                         // Process the item , on success continue, else retry after returned timeout seconds.

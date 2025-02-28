@@ -44,10 +44,10 @@ class FeedsViewModel(
         data object Initialize : Action()
         data class DeleteFeedFTItem(val item: FeedFTWithAlerts) : Action()
         data class FeedClockPriceFTChanged(val item: FeedFTWithAlerts) : Action()
-        data class FeedClockVolumeFTChanged(val item: FeedFTWithAlerts) : Action()
+        data class FeedClockLightsFTChanged(val item: FeedFTWithAlerts) : Action()
         data class DeleteFeedNFTItem(val item: FeedNFTWithAlerts) : Action()
         data class FeedClockPriceNFTChanged(val item: FeedNFTWithAlerts) : Action()
-        data class FeedClockVolumeNFTChanged(val item: FeedNFTWithAlerts) : Action()
+        data class FeedClockLightsNFTChanged(val item: FeedNFTWithAlerts) : Action()
         data class ShowAddAlertDialog(val show: Boolean) : Action()
         data class AddFTAlert(val alert: CustomFTAlert) : Action()
         data class DeleteFTAlert(val alert: CustomFTAlert) : Action()
@@ -137,7 +137,7 @@ class FeedsViewModel(
                             Timber.d("could not change feedClockPrice $e")
                         }
                     }
-                    is Action.FeedClockVolumeFTChanged -> flow {
+                    is Action.FeedClockLightsFTChanged -> flow {
                         try {
                             val feedFT = action.item.feedFT
                             dataRepo.updateFeedFT(
@@ -149,7 +149,7 @@ class FeedsViewModel(
                             Timber.d("could not change feedClockVolume $e")
                         }
                     }
-                    is Action.FeedClockVolumeNFTChanged -> flow {
+                    is Action.FeedClockLightsNFTChanged -> flow {
                         try {
                             val feedNFT = action.item.feedNFT
                             dataRepo.updateFeedNFT(

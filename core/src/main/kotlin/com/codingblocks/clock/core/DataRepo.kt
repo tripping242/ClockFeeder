@@ -628,14 +628,16 @@ class CoreDataRepo(
             val latestPrice  = ftPriceDao.getLatestValidPricesForUnit(item.positionUnit, validTime,1)?.get(0)?.price
 
             if (latestPrice  != null) {
+                Timber.tag("wims").i("item ${item.name} has latetestPrice: $latestPrice")
                 var percentageChange: Double? = null
                 if (item.feedClockVolume) {
                     val previousPrice =
                         try {
-                            ftPriceDao.getLatestValidPricesForUnit(item.positionUnit, previousValidTime,2)?.get(1)?.price
+                            ftPriceDao.getLatestValidPricesForUnit(item.positionUnit, previousValidTime,10)?.lastOrNull()?.price
                         } catch (e: Exception) {
                             null
                         }
+                    Timber.tag("wims").i("      has previousPrice: $previousPrice")
                     percentageChange = if (previousPrice != null && previousPrice != 0.0) {
                         ((latestPrice - previousPrice) / previousPrice) * 100
                     } else {
@@ -684,7 +686,7 @@ class CoreDataRepo(
                 if (item.feedClockVolume) {
                     val previousPrice =
                         try {
-                            nftStatsDao.getLatestValidPricesForPolicy(item.positionPolicy, previousValidTime,2)?.get(1)?.price
+                            nftStatsDao.getLatestValidPricesForPolicy(item.positionPolicy, previousValidTime,10)?.lastOrNull()?.price
                         } catch (e: Exception) {
                             null
                         }

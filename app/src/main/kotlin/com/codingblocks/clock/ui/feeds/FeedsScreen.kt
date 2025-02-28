@@ -14,8 +14,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
 import androidx.compose.material.IconButton
@@ -23,23 +21,18 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AddAlarm
-import androidx.compose.material.icons.outlined.AddAlert
 import androidx.compose.material.icons.outlined.Alarm
 import androidx.compose.material.icons.outlined.AlarmOff
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.ArrowDropUp
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.LooksOne
-import androidx.compose.material.icons.outlined.Loop
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.NotificationsOff
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.WaterfallChart
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -65,20 +58,12 @@ import com.codingblocks.clock.base.ui.utils.formatMax8decimals
 import com.codingblocks.clock.base.ui.utils.formatToNoDecimals
 import com.codingblocks.clock.core.local.data.CustomFTAlert
 import com.codingblocks.clock.core.local.data.CustomNFTAlert
-import com.codingblocks.clock.core.local.data.FeedFT
 import com.codingblocks.clock.core.local.data.FeedFTWithAlerts
-import com.codingblocks.clock.core.local.data.FeedNFT
 import com.codingblocks.clock.core.local.data.FeedNFTWithAlerts
-import com.codingblocks.clock.core.local.data.WatchListConfig
 import com.codingblocks.clock.core.local.data.formattedHHMM
 import com.codingblocks.clock.ui.feeds.FeedsViewModel.ShowType
-import kotlinx.collections.immutable.immutableListOf
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.collections.immutable.toImmutableSet
 import org.koin.androidx.compose.getViewModel
-import java.time.ZonedDateTime
 
 @Composable
 fun FeedsScreen(
@@ -157,7 +142,7 @@ fun FeedsScreen(
                             },
                             onFeedClockVolumeChanged = {
                                 viewModel.dispatch(
-                                    FeedsViewModel.Action.FeedClockVolumeFTChanged(
+                                    FeedsViewModel.Action.FeedClockLightsFTChanged(
                                         item
                                     )
                                 )
@@ -201,9 +186,9 @@ fun FeedsScreen(
                                     )
                                 )
                             },
-                            onFeedClockVolumeChanged = {
+                            onFeedClockLightsChanged = {
                                 viewModel.dispatch(
-                                    FeedsViewModel.Action.FeedClockVolumeNFTChanged(
+                                    FeedsViewModel.Action.FeedClockLightsNFTChanged(
                                         item
                                     )
                                 )
@@ -232,7 +217,7 @@ fun FeedNFTItem(
     item: FeedNFTWithAlerts,
     onDeleteFeedClicked: () -> Unit,
     onFeedClockPriceChanged: () -> Unit,
-    onFeedClockVolumeChanged: () -> Unit,
+    onFeedClockLightsChanged: () -> Unit,
     onAddAlertClicked: (CustomNFTAlert) -> Unit,
     onDeleteAlertClicked: (CustomNFTAlert) -> Unit,
     state: LazyListState,
@@ -429,7 +414,7 @@ fun FeedNFTItem(
                         .wrapContentHeight(),
                     enabled = item.feedNFT.feedClockPrice,
                     text = "Indicate trend with lights",
-                    onCheckedChanged = { onFeedClockVolumeChanged.invoke() },
+                    onCheckedChanged = { onFeedClockLightsChanged.invoke() },
                     checkedState = item.feedNFT.feedClockVolume,
                 )
                 Row(

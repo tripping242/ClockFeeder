@@ -43,8 +43,11 @@ class SettingsViewModel(
                     is Action.LoadAndUpdateFeedFTToClockItems -> flow {
                         try {
                             emit(Mutation.ErrorChanged(null))
+                            Timber.tag("wims").i("before")
                             dataRepo.loadAndUpdateFeedFTToClockItems()
+                            Timber.tag("wims").i("after")
                             val updated = dataRepo.getAllFeedToClockItems()
+                            Timber.tag("wims").i("after updated ${updated.size}")
                             emit(Mutation.FeedToClockItemsChanged(updated))
                         } catch (e: Exception) {
                             emit(Mutation.ErrorChanged("could not load and update FeedFTToClock"))
