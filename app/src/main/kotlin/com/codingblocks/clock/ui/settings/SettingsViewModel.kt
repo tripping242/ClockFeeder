@@ -66,6 +66,7 @@ class SettingsViewModel(
                     is Action.StartClockFeedCycler -> flow {
                         try {
                             emit(Mutation.ErrorChanged(null))
+                            dataRepo.pauseBlockClock()
                             feedCycler.startCycling(dataRepo.cyclingDelayMiliseconds)
                         } catch (e: Exception) {
                             emit(Mutation.ErrorChanged("could not start Cycling the clockFeed"))
@@ -75,7 +76,8 @@ class SettingsViewModel(
                     is Action.PauseClockFeedCycler -> flow {
                         try {
                             emit(Mutation.ErrorChanged(null))
-                            feedCycler.pauseCycling()
+                            feedCycler.stopCycling()
+                            dataRepo.resumeBlockClock()
                         } catch (e: Exception) {
                             emit(Mutation.ErrorChanged("could not pause Cycling the clockFeed"))
                             Timber.d("could not pause Cycling $e")

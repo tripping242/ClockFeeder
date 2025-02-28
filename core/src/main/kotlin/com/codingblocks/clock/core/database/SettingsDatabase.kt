@@ -14,7 +14,7 @@ class SettingsDatabase(
     private val prefs by lazy { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
 
     var feedClockCycleSeconds: Int
-        get() = prefs.getInt(FEED_CLOCK_CYCLE_SECONDS, 15 * 60)
+        get() = prefs.getInt(FEED_CLOCK_CYCLE_SECONDS, 1 * 60)
         set(value) {
             prefs.edit()
                 .putInt(FEED_CLOCK_CYCLE_SECONDS, value)

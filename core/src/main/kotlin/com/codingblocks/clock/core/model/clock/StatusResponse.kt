@@ -24,3 +24,8 @@ data class Rendered(
     val is_error: Boolean?,
     val tag: String?,
 )
+
+@Serializable
+data class OverUnderResponse(
+    val status: String,
+)

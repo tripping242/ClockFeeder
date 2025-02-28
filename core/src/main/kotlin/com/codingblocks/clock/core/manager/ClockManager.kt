@@ -7,6 +7,7 @@ import com.burgstaller.okhttp.digest.CachingAuthenticator
 import com.burgstaller.okhttp.digest.Credentials
 import com.burgstaller.okhttp.digest.DigestAuthenticator
 import com.codingblocks.clock.core.database.ClockDatabase
+import com.codingblocks.clock.core.model.clock.OverUnderResponse
 import com.codingblocks.clock.core.model.clock.StatusResponse
 import com.codingblocks.clock.core.remote.ClockApi
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
@@ -16,6 +17,7 @@ import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.ResponseBody
+import org.json.JSONObject
 import retrofit2.HttpException
 import retrofit2.Response
 import retrofit2.Retrofit
@@ -27,15 +29,14 @@ import kotlin.coroutines.cancellation.CancellationException
 
 interface ClockManager {
     fun setCredentials(password: String?, ipAddress: String?)
-    /**
-     * @param -
-     * @return StatusResponse object with all data
-     * repeatable no timeout
-     */
-
+    suspend fun pauseBlockClock(): Result<Any>
+    suspend fun resumeBlockClock(): Result<Any>
     suspend fun getStatus(): Result<StatusResponse>
-
-    // todo add rest of clockservice
+    suspend fun sendFTPriceFeed(encodedPrice: String, pair: String): Result<Any>
+    suspend fun setOverUnderText(position: Int, over: String, under: String): Result<OverUnderResponse>
+    /*suspend fun sendNFTPriceAlert()
+    suspend fun sendFTPriceFeed()
+    suspend fun sendNFTPriceFeed()*/
 }
 
 class ClockManagerImpl private constructor(
@@ -74,12 +75,31 @@ class ClockManagerImpl private constructor(
         api = provideApi(password, ipAddress)
     }
 
+    override suspend fun pauseBlockClock(): Result<Any> = safeCall(api) {
+        pauseClock()
+    }
+
+    override suspend fun resumeBlockClock(): Result<Any> = safeCall(api) {
+        resumeClock()
+    }
+
     override suspend fun getStatus(): Result<StatusResponse> = safeCall(api) {
         status()
     }
 
+    override suspend fun sendFTPriceFeed(encodedPrice: String, pair: String): Result<Any> = safeCall(api) {
+        setTextTlBrPairSym(
+            text = encodedPrice,
+            tl = null,
+            br = null,
+            pair = pair,
+            omitLine = 1,
+        )
+    }
 
-
+    override suspend fun setOverUnderText(position: Int, over: String, under: String): Result<OverUnderResponse> = safeCall(api) {
+        setOverUnderText(position, over, under)
+    }
 
     private fun provideApi(password: String?, ipAddress: String?): ClockApi? {
         if (password == null || ipAddress == null) {
@@ -114,7 +134,15 @@ class ClockManagerImpl private constructor(
                 if (body != null) {
                     Result.success(body)
                 } else if (errorBody != null) {
-                    Result.failure(ClockApiError.ErrorBody(errorBody))
+                    if (result.code() == 429) { // Handling 429 specifically
+                        val errorJson = errorBody.string()
+                        val waitTime = extractWaitTime(errorJson)
+                        if (waitTime != null) {
+                            Result.failure(ClockApiError.TooManyRequests(waitTime))
+                        } else { Result.failure(ClockApiError.ErrorBody(errorBody)) }
+                    } else {
+                        Result.failure(ClockApiError.ErrorBody(errorBody))
+                    }
                 } else {
                     Result.failure(ClockApiError.BodyAndErrorNull)
                 }
@@ -132,6 +160,7 @@ class ClockManagerImpl private constructor(
         } catch (e: Exception) {
             Result.failure(ClockApiError.UnkownError(e))
         }
+
     }
         .onFailure { Timber.e(it) }
 }
@@ -140,8 +169,21 @@ sealed class ClockApiError(msg: String? = null, throwable: Throwable? = null) : 
     data object NoTokenFound : ClockApiError()
     data object NoUserId : ClockApiError()
     data object BodyAndErrorNull : ClockApiError()
+    data class TooManyRequests(val waitTime: Double) : ClockApiError()
     data object ClockNotOnline : ClockApiError(msg = "Your BlockClock seems to be unreachable")
     data class ErrorBody(val errorBody: ResponseBody) : ClockApiError(msg = errorBody.string())
     data class HttpException(val code: Int, override val message: String) : ClockApiError(msg = "CODE: ${code}\nMESSAGE: $message")
     data class UnkownError(val throwable: Throwable) : ClockApiError(throwable = throwable)
+}
+
+private fun extractWaitTime(errorJson: String): Double? {
+    return try {
+        val jsonObject = JSONObject(errorJson)
+        val errorMessage = jsonObject.getString("error")
+
+        errorMessage.substringAfter("Please wait ").substringBefore(" seconds").toDoubleOrNull()
+    } catch (e: Exception) {
+        Timber.e("Failed to parse wait time: ${e.message}")
+        null
+    }
 }

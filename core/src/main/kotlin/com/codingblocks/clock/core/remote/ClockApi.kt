@@ -1,5 +1,6 @@
 package com.codingblocks.clock.core.remote
 
+import com.codingblocks.clock.core.model.clock.OverUnderResponse
 import com.codingblocks.clock.core.model.clock.StatusResponse
 import retrofit2.Response
 import okhttp3.ResponseBody
@@ -13,10 +14,10 @@ interface ClockApi {
     suspend fun status(): Response<StatusResponse>
 
     @GET("action/update")
-    suspend fun resumeClock(): ResponseBody
+    suspend fun resumeClock(): Response<ResponseBody>
 
     @GET("action/pause")
-    suspend fun pauseClock(): ResponseBody
+    suspend fun pauseClock(): Response<ResponseBody>
 
     @GET("lights/flash")
     suspend fun flashStandard(): ResponseBody
@@ -40,6 +41,13 @@ interface ClockApi {
     @GET("ou_text/5/e/e")
     suspend fun setOverUnder5Text(): ResponseBody
 
+    @GET("ou_text/{position}/{over}/{under}")
+    suspend fun setOverUnderText(
+        @Path("position") position: Int,
+        @Path("over") over: String,
+        @Path("under") under: String
+    ): Response<OverUnderResponse>
+
 
     @GET("show/text/{text}")
     suspend fun setText(@Path("text", encoded = true) text: String): ResponseBody
@@ -54,7 +62,7 @@ interface ClockApi {
         @Query("br") br: String?,
         @Query("pair") pair: String,
         @Query("omit_line") omitLine: Int?,
-    ): ResponseBody
+    ): Response<ResponseBody>
 
     @GET("show/text/{text}")
     suspend fun setNumberTlBrPairSym(

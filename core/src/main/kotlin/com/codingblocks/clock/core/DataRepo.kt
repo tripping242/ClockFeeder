@@ -74,6 +74,7 @@ interface DataRepo {
     val feedsNFTWithAlerts: List<FeedNFTWithAlerts>
 
     val cyclingDelayMiliseconds: Long
+
     // worker with price retrieval and storage
     fun schedulePeriodicFetching()
     fun cancelPeriodicFetching()
@@ -81,9 +82,14 @@ interface DataRepo {
     fun scheduleFTAlertWorker()
 
     // BlockClock
+    suspend fun pauseBlockClock()
+    suspend fun resumeBlockClock()
+
     suspend fun getClockStatus(): Result<StatusResponse>
-    suspend fun sendFTPriceAlert()
-    suspend fun sendNFTPriceAlert()
+    suspend fun sendFTPriceFeed(encodedPrice: String, pair: String): Result<Any>
+    suspend fun sendFTPriceFeed(name: String, price: Int)
+    /*suspend fun sendFTPriceFeed()
+    suspend fun sendNFTPriceFeed()*/
 
     // wallet with address
     suspend fun resolveAdaHandle(handle: String): Result<String>
@@ -166,6 +172,7 @@ interface DataRepo {
     fun getAllFeedToClockItems() : List<FeedToClockItem>
     fun deleteFeedToClockItem(item : FeedToClockItem)
     fun insertFeedToClockItem(item : FeedToClockItem)
+    fun moveFeedToClockItemToTheEnd(item : FeedToClockItem)
 }
 
 class CoreDataRepo(
@@ -270,6 +277,14 @@ class CoreDataRepo(
         )
     }
 
+    override suspend fun pauseBlockClock() {
+        clockManager.pauseBlockClock()
+    }
+
+    override suspend fun resumeBlockClock() {
+        clockManager.resumeBlockClock()
+    }
+
 
     // use this from settings
     fun updateFetchDelay(newDelay: Long) {
@@ -313,13 +328,21 @@ class CoreDataRepo(
         get() = settingsManager.settings.feedClockCycleSeconds * 1000.toLong()
 
     override suspend fun getClockStatus(): Result<StatusResponse> = clockManager.getStatus()
-    override suspend fun sendFTPriceAlert() {
-        TODO("Not yet implemented")
+    override suspend fun sendFTPriceFeed(encodedPrice: String, pair: String) = clockManager.sendFTPriceFeed(encodedPrice, pair)
+    override suspend fun sendFTPriceFeed(name: String, price: Int) {
+        val formattedPrice = formatNFTPrice(price)
+        val nameChunks = splitAndFormatName(name)
+        for ((position, over, under) in nameChunks) {
+            clockManager.setOverUnderText(position, over, under)
+        }
+        clockManager.setOverUnderText(6, formattedPrice, "ADA")
     }
 
-    override suspend fun sendNFTPriceAlert() {
-        TODO("Not yet implemented")
-    }
+    /*override suspend fun sendNFTPriceAlert() = clockManager.sendNFTPriceAlert()
+
+    override suspend fun sendFTPriceFeed() = clockManager.sendFTPriceFeed()
+
+    override suspend fun sendNFTPriceFeed() = clockManager.sendNFTPriceFeed()*/
 
     override suspend fun resolveAdaHandle(handle: String): Result<String> =
         blockFrostManager.resolveAdaHandle(handle)
@@ -686,6 +709,11 @@ class CoreDataRepo(
 
     override fun insertFeedToClockItem(item: FeedToClockItem) =
         feedTheclockDao.insert(item)
+
+    override fun moveFeedToClockItemToTheEnd(item: FeedToClockItem) {
+        feedTheclockDao.delete(item)
+        feedTheclockDao.insertAtEnd(item)
+    }
 
     override suspend fun addFeedFTWithAlerts(feedFT: FeedFT, alerts: List<CustomFTAlert>) {
         feedFTDao.insert(feedFT)
