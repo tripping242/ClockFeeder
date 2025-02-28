@@ -171,6 +171,7 @@ interface DataRepo {
 
     fun getAllFeedToClockItems() : List<FeedToClockItem>
     fun deleteFeedToClockItem(item : FeedToClockItem)
+    fun deleteFeedToClockItemsForUnit(unit: String)
     fun insertFeedToClockItem(item : FeedToClockItem)
     fun moveFeedToClockItemToTheEnd(item : FeedToClockItem)
 }
@@ -701,11 +702,14 @@ class CoreDataRepo(
     }
 
     override fun getAllFeedToClockItems(): List<FeedToClockItem> =
-        // todo optional ordering with tiemstamp?
         feedTheclockDao.getAll()
 
     override fun deleteFeedToClockItem(item: FeedToClockItem) =
         feedTheclockDao.delete(item)
+
+    override fun deleteFeedToClockItemsForUnit(unit: String) {
+        feedTheclockDao.deleteByUnit(unit)
+    }
 
     override fun insertFeedToClockItem(item: FeedToClockItem) =
         feedTheclockDao.insert(item)

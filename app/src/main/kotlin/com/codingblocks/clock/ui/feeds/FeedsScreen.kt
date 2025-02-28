@@ -16,9 +16,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
 import androidx.compose.material.IconButton
 import androidx.compose.material.Text
+import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AddAlarm
 import androidx.compose.material.icons.outlined.AddAlert
@@ -87,9 +89,6 @@ fun FeedsScreen(
     val childLazyListState = rememberLazyListState()
     var expandedItemIndex by remember { mutableStateOf(-1) }
     var showType by remember { mutableStateOf(FeedsViewModel.ShowType.FT) }
-    var showSettingsDialog by remember { mutableStateOf(false) }
-    var alertsDialogFeedFTItem: FeedFT? by remember { mutableStateOf(null) }
-    var alertsDialogFeedNFTItem: FeedNFT? by remember { mutableStateOf(null) }
 
     LaunchedEffect(expandedItemIndex) {
         if (expandedItemIndex != -1) parentLazyListState.animateScrollToItem(expandedItemIndex) // Smooth scroll to the item
@@ -240,6 +239,7 @@ fun FeedNFTItem(
 ) {
     var isExpanded by remember { mutableStateOf(false) }
     var showAddDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     val optionsAlertValue = remember {
         FeedsViewModel.AlertValue.entries.map { it.label }
@@ -250,6 +250,27 @@ fun FeedNFTItem(
     val optionsAlertType = remember {
         FeedsViewModel.AlertType.entries.map { it.label }
     }.toImmutableList()
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Are you sure?") },
+            text = { Text("This will also delete all related alerts and your clock feed for this NFT!") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    onDeleteFeedClicked.invoke()
+                }) {
+                    Text("Confirm")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     if (showAddDialog) {
         var selectedTypeSet: Set<Int> by remember { mutableStateOf(emptySet()) }
@@ -386,7 +407,7 @@ fun FeedNFTItem(
                             .padding(end = 8.dp)
                     )
                     IconButton(
-                        onClick = onDeleteFeedClicked,
+                        onClick = { showDeleteDialog = true },
                         modifier = Modifier,
                     ) {
                         AppIcon(icon = Icons.Outlined.Delete)
@@ -407,7 +428,7 @@ fun FeedNFTItem(
                         .padding(4.dp)
                         .wrapContentHeight(),
                     enabled = item.feedNFT.feedClockPrice,
-                    text = "also show volume indicators on BlockClock",
+                    text = "Indicate trend with lights",
                     onCheckedChanged = { onFeedClockVolumeChanged.invoke() },
                     checkedState = item.feedNFT.feedClockVolume,
                 )
@@ -465,6 +486,7 @@ fun FeedFTItem(
 ) {
     var isExpanded by remember { mutableStateOf(false) }
     var showAddDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     val optionsAlertValue = remember {
         FeedsViewModel.AlertValue.entries.map { it.label }
@@ -476,6 +498,26 @@ fun FeedFTItem(
         FeedsViewModel.AlertType.entries.map { it.label }
     }.toImmutableList()
 
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Are you sure?") },
+            text = { Text("This will also delete all related alerts and your clock feed for this Token!") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    onDeleteFeedClicked.invoke()
+                }) {
+                    Text("Confirm")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
     if (showAddDialog) {
         var selectedTypeSet: Set<Int> by remember { mutableStateOf(emptySet()) }
         var selectedTriggerIndex by remember { mutableStateOf(-1) }
@@ -611,7 +653,7 @@ fun FeedFTItem(
                             .padding(end = 8.dp)
                     )
                     IconButton(
-                        onClick = onDeleteFeedClicked,
+                        onClick = { showDeleteDialog = true },
                         modifier = Modifier,
                     ) {
                         AppIcon(icon = Icons.Outlined.Delete)
@@ -632,7 +674,7 @@ fun FeedFTItem(
                         .padding(4.dp)
                         .wrapContentHeight(),
                     enabled = item.feedFT.feedClockPrice,
-                    text = "also show volume indicators on BlockClock",
+                    text = "Indicate trend with lights",
                     onCheckedChanged = { onFeedClockVolumeChanged.invoke() },
                     checkedState = item.feedFT.feedClockVolume,
                 )

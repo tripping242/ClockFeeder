@@ -90,8 +90,11 @@ class FeedsViewModel(
                     is Action.DeleteFeedFTItem -> flow {
                         try {
                             val feedWithAlerts = action.item
+                            dataRepo.deleteFeedToClockItemsForUnit(feedWithAlerts.feedFT.positionUnit)
                             dataRepo.deleteAlertsForFeedWithUnit(feedWithAlerts.feedFT)
                             dataRepo.deleteFeedFT(feedWithAlerts.feedFT)
+                            val feedFTWithAlert = dataRepo.feedFTWithAlerts
+                            emit(Mutation.FeedFTWithAlertsChanged(feedFTWithAlert))
                         } catch (e: Exception) {
                             Timber.d("could not delete feed with alerts $e")
                         }
@@ -99,8 +102,11 @@ class FeedsViewModel(
                     is Action.DeleteFeedNFTItem -> flow {
                         try {
                             val feedWithAlerts = action.item
+                            dataRepo.deleteFeedToClockItemsForUnit(feedWithAlerts.feedNFT.positionPolicy)
                             dataRepo.deleteAlertsForFeedWithPolicy(feedWithAlerts.feedNFT.positionPolicy)
                             dataRepo.deleteFeedNFT(feedWithAlerts.feedNFT)
+                            val feedNFTWithAlerts = dataRepo.feedsNFTWithAlerts
+                            emit(Mutation.FeedNFTWithAlertsChanged(feedNFTWithAlerts))
                         } catch (e: Exception) {
                             Timber.d("could not delete feed with alerts $e")
                         }
@@ -111,6 +117,8 @@ class FeedsViewModel(
                             dataRepo.updateFeedFT(
                                 feedFT.copy(feedClockPrice = !feedFT.feedClockPrice)
                             )
+                            val feedFTWithAlert = dataRepo.feedFTWithAlerts
+                            emit(Mutation.FeedFTWithAlertsChanged(feedFTWithAlert))
                         } catch (e: Exception) {
                             Timber.d("could not change feedClockPrice $e")
                         }
@@ -121,6 +129,8 @@ class FeedsViewModel(
                             dataRepo.updateFeedNFT(
                                 feedNFT.copy(feedClockPrice = !feedNFT.feedClockPrice)
                             )
+                            val feedNFTWithAlerts = dataRepo.feedsNFTWithAlerts
+                            emit(Mutation.FeedNFTWithAlertsChanged(feedNFTWithAlerts))
                         } catch (e: Exception) {
                             Timber.d("could not change feedClockPrice $e")
                         }
@@ -131,6 +141,8 @@ class FeedsViewModel(
                             dataRepo.updateFeedFT(
                                 feedFT.copy(feedClockVolume = !feedFT.feedClockVolume)
                             )
+                            val feedFTWithAlert = dataRepo.feedFTWithAlerts
+                            emit(Mutation.FeedFTWithAlertsChanged(feedFTWithAlert))
                         } catch (e: Exception) {
                             Timber.d("could not change feedClockVolume $e")
                         }
@@ -141,6 +153,8 @@ class FeedsViewModel(
                             dataRepo.updateFeedNFT(
                                 feedNFT.copy(feedClockVolume = !feedNFT.feedClockVolume)
                             )
+                            val feedNFTWithAlerts = dataRepo.feedsNFTWithAlerts
+                            emit(Mutation.FeedNFTWithAlertsChanged(feedNFTWithAlerts))
                         } catch (e: Exception) {
                             Timber.d("could not change feedClockVolume $e")
                         }
