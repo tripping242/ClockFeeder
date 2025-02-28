@@ -117,6 +117,7 @@ class FeedsViewModel(
                             dataRepo.updateFeedFT(
                                 feedFT.copy(feedClockPrice = !feedFT.feedClockPrice)
                             )
+                            dataRepo.deleteFeedToClockItemsForUnit(feedFT.positionUnit)
                             val feedFTWithAlert = dataRepo.feedFTWithAlerts
                             emit(Mutation.FeedFTWithAlertsChanged(feedFTWithAlert))
                         } catch (e: Exception) {
@@ -129,6 +130,7 @@ class FeedsViewModel(
                             dataRepo.updateFeedNFT(
                                 feedNFT.copy(feedClockPrice = !feedNFT.feedClockPrice)
                             )
+                            dataRepo.deleteFeedToClockItemsForUnit(feedNFT.positionPolicy)
                             val feedNFTWithAlerts = dataRepo.feedsNFTWithAlerts
                             emit(Mutation.FeedNFTWithAlertsChanged(feedNFTWithAlerts))
                         } catch (e: Exception) {

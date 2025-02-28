@@ -10,7 +10,7 @@ enum class FeedType {
 }
 
 enum class ColorMode {
-    BlinkOnce, AlternateBlink, Blink5Fast, Blink3Slow, StartToEnd, EndToStart
+    BlinkOnce, BlinkUp, BlinkDown, BlinkUpMuch, BlinkDownMuch
 }
 
 @Entity(

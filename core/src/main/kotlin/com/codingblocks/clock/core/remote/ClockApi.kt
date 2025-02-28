@@ -13,7 +13,7 @@ interface ClockApi {
     @GET("status")
     suspend fun status(): Response<StatusResponse>
 
-    @GET("action/update")
+    @GET("action/update?rate=5")
     suspend fun resumeClock(): Response<ResponseBody>
 
     @GET("action/pause")
