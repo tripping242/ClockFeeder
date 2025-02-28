@@ -301,7 +301,7 @@ fun FeedNFTItem(
                     if (selectedValueIndex == 0) {
                         TextRowWithDoubleInputTextField(
                             text = "Trigger when price reaches:",
-                            amount = amount ?: 0.0,
+                            amount = amount,
                             onAmountChanged = { newAmount ->
                                 amount = newAmount
                             },
@@ -320,7 +320,7 @@ fun FeedNFTItem(
                     }
                     Button(
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = selectedTriggerIndex != -1 && selectedValueIndex != -1 && selectedTypeSet.isNotEmpty(),
+                        enabled = selectedTriggerIndex != -1 && selectedValueIndex != -1 && selectedTypeSet.isNotEmpty() && amount != null,
                         onClick = {
                             with (item.feedNFT) {
                                 val alert: CustomNFTAlert = CustomNFTAlert(
@@ -526,7 +526,7 @@ fun FeedFTItem(
                     if (selectedValueIndex == 0) {
                         TextRowWithDoubleInputTextField(
                             text = "Trigger when price reaches:",
-                            amount = amount ?: 0.0,
+                            amount = amount,
                             onAmountChanged = { newAmount ->
                                 amount = newAmount
                             },
@@ -545,7 +545,7 @@ fun FeedFTItem(
                     }
                     Button(
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = selectedTriggerIndex != -1 && selectedValueIndex != -1 && selectedTypeSet.isNotEmpty(),
+                        enabled = selectedTriggerIndex != -1 && selectedValueIndex != -1 && selectedTypeSet.isNotEmpty() && amount != null,
                         onClick = {
                             with (item.feedFT) {
                                 val alert: CustomFTAlert = CustomFTAlert(

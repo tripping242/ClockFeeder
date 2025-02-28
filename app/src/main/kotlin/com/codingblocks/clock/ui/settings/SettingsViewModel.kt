@@ -5,6 +5,8 @@ import at.florianschuster.control.Controller
 import at.florianschuster.control.createController
 import com.codingblocks.clock.base.control.ControllerViewModel
 import com.codingblocks.clock.core.DataRepo
+import com.codingblocks.clock.core.FeedCycler
+import com.codingblocks.clock.core.local.data.FeedToClockItem
 import com.codingblocks.clock.core.local.data.PositionFTLocal
 import com.codingblocks.clock.core.local.data.PositionLPLocal
 import com.codingblocks.clock.core.local.data.PositionNFTLocal
@@ -12,32 +14,24 @@ import kotlinx.coroutines.flow.flow
 import timber.log.Timber
 
 class SettingsViewModel(
-    private val dataRepo: DataRepo
+    private val dataRepo: DataRepo,
+    private val feedCycler: FeedCycler,
 ) : ControllerViewModel<SettingsViewModel.Action, SettingsViewModel.State>() {
 
-    enum class ShowType {
-        FT, NFT, LP
-    }
-
     sealed class Action {
-        data object GetPositionsFT : Action()
-        data object GetPositionsNFT : Action()
-        data object GetPositionsLP : Action()
+        data object LoadAndUpdateFeedFTToClockItems : Action()
+        data object LoadAndUpdateFeedNFTToClockItems : Action()
+        data object StartClockFeedCycler : Action()
+        data object PauseClockFeedCycler : Action()
     }
 
     sealed class Mutation {
-        data class PositionsFTChanged(val positions: List<PositionFTLocal>) : Mutation()
-        data class PositionsNFTChanged(val positions: List<PositionNFTLocal>) : Mutation()
-        data class PositionsLPChanged(val positions: List<PositionLPLocal>) : Mutation()
+        data class FeedToClockItemsChanged(val items: List<FeedToClockItem>) : Mutation()
         data class ErrorChanged(val errorMessage: String?) : Mutation()
-        data class ShowTypeChanged(val showType: ShowType) : Mutation()
     }
 
     data class State(
-        val positionsFT: List<PositionFTLocal> = emptyList(),
-        val positionsNFT: List<PositionNFTLocal> = emptyList(),
-        val positionsLP: List<PositionLPLocal> = emptyList(),
-        val showType: ShowType = ShowType.FT,
+        val feedToClockItems: List<FeedToClockItem> = emptyList(),
         val error: String? = null,
     )
 
@@ -46,45 +40,53 @@ class SettingsViewModel(
             initialState = State(),
             mutator = { action ->
                 when (action) {
-                    is Action.GetPositionsFT -> flow {
+                    is Action.LoadAndUpdateFeedFTToClockItems -> flow {
                         try {
                             emit(Mutation.ErrorChanged(null))
-                            //dataRepo.getFTPositionsForWatchlist().let { emit(Mutation.PositionsFTChanged(it)) }
-                            emit(Mutation.ShowTypeChanged(ShowType.FT))
+                            dataRepo.loadAndUpdateFeedFTToClockItems()
+                            val updated = dataRepo.getAllFeedToClockItems()
+                            emit(Mutation.FeedToClockItemsChanged(updated))
                         } catch (e: Exception) {
-                            emit(Mutation.ErrorChanged("could not retrieve positions ${e.message}"))
-                            Timber.d("could not retrieve Positions $e")
+                            emit(Mutation.ErrorChanged("could not load and update FeedFTToClock"))
+                            Timber.d("could not load Positions $e")
                         }
                     }
-                    is Action.GetPositionsNFT -> flow {
+                    is Action.LoadAndUpdateFeedNFTToClockItems -> flow {
                         try {
+                            Timber.tag("wims").i("LoadAndUpdateFeedNFTToClockItems")
                             emit(Mutation.ErrorChanged(null))
-                            //dataRepo.getNFTPositionsForWatchlist().let { emit(Mutation.PositionsNFTChanged(it)) }
-                            emit(Mutation.ShowTypeChanged(ShowType.NFT))
+                            dataRepo.loadAndUpdateFeedNFTToClockItems()
+                            val updated = dataRepo.getAllFeedToClockItems()
+                            emit(Mutation.FeedToClockItemsChanged(updated))
                         } catch (e: Exception) {
-                            emit(Mutation.ErrorChanged("could not retrieve positions ${e.message}"))
-                            Timber.d("could not retrieve Positions $e")
+                            emit(Mutation.ErrorChanged("could not load and update FeedNFTToClock"))
+                            Timber.d("could not load Positions $e")
                         }
                     }
-                    is Action.GetPositionsLP -> flow {
+                    is Action.StartClockFeedCycler -> flow {
                         try {
                             emit(Mutation.ErrorChanged(null))
-                            // dataRepo.getLPPositionsForWatchlist().let { emit(Mutation.PositionsLPChanged(it)) }
-                            emit(Mutation.ShowTypeChanged(ShowType.LP))
+                            feedCycler.startCycling(dataRepo.cyclingDelayMiliseconds)
                         } catch (e: Exception) {
-                            emit(Mutation.ErrorChanged("could not retrieve positions ${e.message}"))
-                            Timber.d("could not retrieve Positions $e")
+                            emit(Mutation.ErrorChanged("could not start Cycling the clockFeed"))
+                            Timber.d("could not start Cycling $e")
+                        }
+                    }
+                    is Action.PauseClockFeedCycler -> flow {
+                        try {
+                            emit(Mutation.ErrorChanged(null))
+                            feedCycler.pauseCycling()
+                        } catch (e: Exception) {
+                            emit(Mutation.ErrorChanged("could not pause Cycling the clockFeed"))
+                            Timber.d("could not pause Cycling $e")
                         }
                     }
                 }
             },
             reducer = { mutation, previousState ->
                 when (mutation) {
-                    is Mutation.PositionsFTChanged -> previousState.copy(positionsFT = mutation.positions)
+                    is Mutation.FeedToClockItemsChanged -> previousState.copy(feedToClockItems = mutation.items)
                     is Mutation.ErrorChanged -> previousState.copy(error = mutation.errorMessage)
-                    is Mutation.PositionsNFTChanged -> previousState.copy(positionsNFT = mutation.positions)
-                    is Mutation.PositionsLPChanged -> previousState.copy(positionsLP = mutation.positions)
-                    is Mutation.ShowTypeChanged -> previousState.copy(showType = mutation.showType)
                 }
             }
         )

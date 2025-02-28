@@ -30,7 +30,6 @@ import androidx.work.PeriodicWorkRequest
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.codingblocks.clock.core.local.AppDatabase
-import com.codingblocks.clock.core.local.dao.NFTStatsDao
 import com.codingblocks.clock.core.local.data.CustomFTAlert
 import com.codingblocks.clock.core.local.data.CustomNFTAlert
 import com.codingblocks.clock.core.local.data.FTPriceEntity
@@ -38,6 +37,8 @@ import com.codingblocks.clock.core.local.data.FeedFT
 import com.codingblocks.clock.core.local.data.FeedFTWithAlerts
 import com.codingblocks.clock.core.local.data.FeedNFT
 import com.codingblocks.clock.core.local.data.FeedNFTWithAlerts
+import com.codingblocks.clock.core.local.data.FeedToClockItem
+import com.codingblocks.clock.core.local.data.FeedType
 import com.codingblocks.clock.core.local.data.NFTStatsEntity
 import com.codingblocks.clock.core.local.data.PositionFTLocal
 import com.codingblocks.clock.core.local.data.PositionLPLocal
@@ -48,6 +49,8 @@ import com.codingblocks.clock.core.manager.BlockFrostManager
 import com.codingblocks.clock.core.manager.BlockFrostManagerImpl
 import com.codingblocks.clock.core.manager.ClockManager
 import com.codingblocks.clock.core.manager.ClockManagerImpl
+import com.codingblocks.clock.core.manager.SettingsManager
+import com.codingblocks.clock.core.manager.SettingsManagerImpl
 import com.codingblocks.clock.core.manager.TapToolsManager
 import com.codingblocks.clock.core.manager.TapToolsManagerImpl
 import com.codingblocks.clock.core.model.AppBuildInfo
@@ -70,13 +73,17 @@ interface DataRepo {
     val feedFTWithAlerts: List<FeedFTWithAlerts>
     val feedsNFTWithAlerts: List<FeedNFTWithAlerts>
 
+    val cyclingDelayMiliseconds: Long
     // worker with price retrieval and storage
     fun schedulePeriodicFetching()
     fun cancelPeriodicFetching()
     fun scheduleNFTAlertWorker()
+    fun scheduleFTAlertWorker()
 
     // BlockClock
     suspend fun getClockStatus(): Result<StatusResponse>
+    suspend fun sendFTPriceAlert()
+    suspend fun sendNFTPriceAlert()
 
     // wallet with address
     suspend fun resolveAdaHandle(handle: String): Result<String>
@@ -136,7 +143,9 @@ interface DataRepo {
     suspend fun deleteAlertsForFeedWithUnit(feedFT: FeedFT)
     suspend fun deleteAlertsForFeedWithPolicy(policy: String)
 
-    suspend fun getAllEnabledAlerts():  List<CustomNFTAlert>
+    suspend fun getAllEnabledNFTAlerts():  List<CustomNFTAlert>
+    suspend fun getAllEnabledFTAlerts():  List<CustomFTAlert>
+
     // Logos
     suspend fun getAndStoreRemoteLogo(policy: String)
     suspend fun getLocalLogo(policy: String): Bitmap?
@@ -144,7 +153,19 @@ interface DataRepo {
     // prices
     suspend fun getAndStorePricesForTokens()
     suspend fun getAndStorePricesForPolicies()
-    suspend fun getLatestStatsForPolicy(policy: String): List<NFTStatsEntity>
+    suspend fun getLatest2StatsForPolicy(policy: String): List<NFTStatsEntity>
+    suspend fun getLatest2PricesForUnit(unit: String): List<FTPriceEntity>
+
+    // feedTheClockDao stores the list of feedItems that we cycle through
+    // need to get updated when feed item deleted, or when alert triggers...
+    suspend fun loadAndUpdateFeedFTToClockItems()
+    suspend fun loadAndUpdateFeedNFTToClockItems()
+    suspend fun addAlertFTToFeedToClockItems(alert: CustomFTAlert, reachedPrice: Double)
+    suspend fun addAlertNFTToFeedToClockItems(alert: CustomNFTAlert, reachedPrice: Double)
+
+    fun getAllFeedToClockItems() : List<FeedToClockItem>
+    fun deleteFeedToClockItem(item : FeedToClockItem)
+    fun insertFeedToClockItem(item : FeedToClockItem)
 }
 
 class CoreDataRepo(
@@ -157,6 +178,7 @@ class CoreDataRepo(
     private val tapToolsManager: TapToolsManager = provideTapToolsManager()
     private val clockManager: ClockManager = provideClockManager()
     private val blockFrostManager: BlockFrostManager = provideBlockFrostManager()
+    private val settingsManager: SettingsManager = provideSettingsManager()
 
     private val positionsDao = database.getPositionsDao()
     private val watchlistsDao = database.getWatchListsDao()
@@ -166,6 +188,7 @@ class CoreDataRepo(
     private val customNFTAlertDao = database.getNFTAlertsDao()
     private val nftStatsDao = database.getNFTStatsDao()
     private val ftPriceDao = database.getFTPriceDao()
+    private val feedTheclockDao = database.getFeedTheClockDao()
 
     var fetchDelay: Long = 1 // todo move to settings
 
@@ -222,6 +245,31 @@ class CoreDataRepo(
             workRequest
         )
     }
+    override fun scheduleFTAlertWorker() {
+        Timber.tag("wims").i("scheduleFTAlertWorker")
+
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val immediateWorkRequest = OneTimeWorkRequestBuilder<FTAlertWorker>().build()
+
+        workManager.enqueue(immediateWorkRequest)
+
+        val workRequest: PeriodicWorkRequest =
+            PeriodicWorkRequestBuilder<FTAlertWorker>(
+                fetchDelay, TimeUnit.MINUTES
+            )
+                .setConstraints(constraints)
+                .build()
+
+        workManager.enqueueUniquePeriodicWork(
+            "FTAlertWorker",
+            ExistingPeriodicWorkPolicy.UPDATE,
+            workRequest
+        )
+    }
+
 
     // use this from settings
     fun updateFetchDelay(newDelay: Long) {
@@ -251,7 +299,9 @@ class CoreDataRepo(
             context, BlockFrostConfig(appBuildInfo.blockFrostBaseUrl)
         ).setOkHttpClient(okHttpClient).build()
     }
-
+    private fun provideSettingsManager(): SettingsManager {
+        return SettingsManagerImpl(context)
+    }
 
     override val watchlistsWithPositions: List<WatchlistWithPositions>
         get() = database.getWatchListsDao().getWatchlistsWithPositions()
@@ -259,8 +309,18 @@ class CoreDataRepo(
         get() = database.getFeedFTDao().getFeedsFTWithAlerts()
     override val feedsNFTWithAlerts: List<FeedNFTWithAlerts>
         get() = database.getFeedNFTDao().getFeedsNFTWithAlerts()
+    override val cyclingDelayMiliseconds: Long
+        get() = settingsManager.settings.feedClockCycleSeconds * 1000.toLong()
 
     override suspend fun getClockStatus(): Result<StatusResponse> = clockManager.getStatus()
+    override suspend fun sendFTPriceAlert() {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun sendNFTPriceAlert() {
+        TODO("Not yet implemented")
+    }
+
     override suspend fun resolveAdaHandle(handle: String): Result<String> =
         blockFrostManager.resolveAdaHandle(handle)
 
@@ -444,8 +504,11 @@ class CoreDataRepo(
         customNFTAlertDao.deleteAlertsForFeed(policy)
     }
 
-    override suspend fun getAllEnabledAlerts() =
+    override suspend fun getAllEnabledNFTAlerts() =
         customNFTAlertDao.getAllEnabledAlerts()
+
+    override suspend fun getAllEnabledFTAlerts(): List<CustomFTAlert> =
+        customFTAlertDao.getAllEnabledAlerts()
 
     override suspend fun getAndStoreRemoteLogo(policy: String) {
         // todo load from website
@@ -471,7 +534,7 @@ class CoreDataRepo(
 
     override suspend fun getAndStorePricesForTokens() {
         withContext(Dispatchers.IO) {
-            Timber.d("retrieving token price info")
+            Timber.tag("wims").i("retrieving token price info")
             try {
                 val unitList = feedFTDao.getAllFTUnitsFromFeed()
                 tapToolsManager.getPricesForTokens(unitList)
@@ -496,7 +559,7 @@ class CoreDataRepo(
 
     override suspend fun getAndStorePricesForPolicies() {
         withContext(Dispatchers.IO) {
-            Timber.d("retrieving NFT price info")
+            Timber.tag("wims").i("retrieving NFT price info")
             val policies = feedNFTDao.getAllNFTPoliciesFromFeed()
             policies.forEach { policy ->
                 try {
@@ -527,8 +590,102 @@ class CoreDataRepo(
         }
     }
 
-    override suspend fun getLatestStatsForPolicy(policy: String): List<NFTStatsEntity> =
+    override suspend fun getLatest2StatsForPolicy(policy: String): List<NFTStatsEntity> =
         nftStatsDao.getLatestStatsForPolicy(policy, 2)
+
+    override suspend fun getLatest2PricesForUnit(unit: String): List<FTPriceEntity> =
+        ftPriceDao.getLatestPricesForUnit(unit, 2)
+
+    override suspend fun loadAndUpdateFeedFTToClockItems() {
+        val validTime = System.currentTimeMillis() - (settingsManager.settings.priceTooOldSeconds * 1000)
+        feedFTDao.getAllFeedFTClockEnabled().forEach { item ->
+            val price = ftPriceDao.getLatestValidPriceForUnit(item.positionUnit, validTime)?.price
+            if (price != null) {
+                // todo we can also map other values if updated, like colorcoding on, colorMode?
+                // val colorStart =
+                val existingFeedTheClockItem = feedTheclockDao.getByUnit(item.positionUnit)
+                if (existingFeedTheClockItem != null) {
+                    feedTheclockDao.update(existingFeedTheClockItem.copy(price = price))
+                } else {
+                    // add new feedToClockItem
+                    feedTheclockDao.insertAtEnd(
+                        FeedToClockItem(
+                            unit = item.positionUnit,
+                            name = item.name,
+                            price = price,
+                            feedType = FeedType.FeedFT,
+                            orderIndex = 0,
+                        )
+                    )
+                }
+            } else {
+                // trigger loadprices once and retry loadUpdate...
+                // or let this be done before we call this loadAndUpdateFeedToClockItems
+            }
+
+        }
+    }
+
+    override suspend fun loadAndUpdateFeedNFTToClockItems() {
+        val validTime = System.currentTimeMillis() - (settingsManager.settings.priceTooOldSeconds * 1000)
+        feedNFTDao.getAllFeedNFTClockEnabled().forEach { item ->
+            Timber.tag("wims").i("FeedNFTClockEnabled item ${item.name} with price: ${item.feedClockPrice}")
+            val price = nftStatsDao.getLatestValidPriceForPolicy(item.positionPolicy, validTime)?.price
+            Timber.tag("wims").i("    stored latest price = $price ")
+            if (price != null) {
+                // todo we can also map other values if updated, like colorcoding on, colorMode?
+                // val colorStart =
+                val existingFeedTheClockItem = feedTheclockDao.getByUnit(item.positionPolicy)
+                if (existingFeedTheClockItem != null) {
+                    feedTheclockDao.update(existingFeedTheClockItem.copy(price = price))
+                } else {
+                    // add new feedToClockItem
+                    feedTheclockDao.insertAtEnd(
+                        FeedToClockItem(
+                            unit = item.positionPolicy,
+                            name = item.name,
+                            price = price,
+                            feedType = FeedType.FeedNFT,
+                            orderIndex = 0,
+                        )
+                    )
+                }
+            } else {
+                // trigger loadprices once and retry loadUpdate...
+                // or let this be done before we call this loadAndUpdateFeedToClockItems
+            }
+
+        }
+    }
+
+    override suspend fun addAlertFTToFeedToClockItems(alert: CustomFTAlert, reachedPrice: Double) {
+        val feedToClockItem = FeedToClockItem(
+            unit = "alert",
+            name = alert.ticker,
+            price = reachedPrice,
+            feedType = FeedType.AlertFT,
+            deleteWhenDone = true,
+            orderIndex = 0,
+        )
+        feedTheclockDao.insertAtFront(feedToClockItem)
+    }
+
+    override suspend fun addAlertNFTToFeedToClockItems(
+        alert: CustomNFTAlert,
+        reachedPrice: Double
+    ) {
+        TODO("Not yet implemented")
+    }
+
+    override fun getAllFeedToClockItems(): List<FeedToClockItem> =
+        // todo optional ordering with tiemstamp?
+        feedTheclockDao.getAll()
+
+    override fun deleteFeedToClockItem(item: FeedToClockItem) =
+        feedTheclockDao.delete(item)
+
+    override fun insertFeedToClockItem(item: FeedToClockItem) =
+        feedTheclockDao.insert(item)
 
     override suspend fun addFeedFTWithAlerts(feedFT: FeedFT, alerts: List<CustomFTAlert>) {
         feedFTDao.insert(feedFT)

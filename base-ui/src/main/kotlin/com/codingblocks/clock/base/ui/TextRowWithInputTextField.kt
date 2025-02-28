@@ -15,6 +15,7 @@ import androidx.compose.material.Text
 //noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -71,13 +72,15 @@ fun TextRowWithIntegerInputTextField(
 @Composable
 fun TextRowWithDoubleInputTextField(
     text: String,
-    amount: Double,
+    amount: Double?,
     hint: String?,
-    onAmountChanged: (Double) -> Unit,
+    onAmountChanged: (Double?) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
     var isError by remember { mutableStateOf(false) }
+    var displayValue by remember { mutableStateOf(formatAmount(amount)) }
+
     Row(
         modifier = modifier
             .padding(16.dp)
@@ -96,19 +99,20 @@ fun TextRowWithDoubleInputTextField(
                 .padding(end = 8.dp)
                 .weight(0.5f),
             enabled = enabled,
-            value = if (amount != 0.0) amount.toString() else "",
+            value = displayValue,
             onValueChange = { value ->
-                if (value.isEmpty() || value.matches(Regex("^\\d*\\.?\\d*\$"))) {
-                    val doubleValue: Double? = try { value.toDouble() } catch (e: Exception) { null }
-                    isError = doubleValue == null || (value.isNotEmpty() && doubleValue <= 0)
+                val doubleValue: Double? = try {
+                    value.toDouble()
+                } catch (e: Exception) {
+                    null
+                }
+                // Set error state if the value is invalid (e.g., non-numeric)
+                isError = doubleValue == null && value.isNotEmpty()
 
-                    if (!isError) {
-                        onAmountChanged(doubleValue!!)
-                    } else if (value.isEmpty()) {
-                        onAmountChanged(0.0) // Default to 0 when empty
-                    }
-                } else {
-                    isError = true
+                // Update the amount if the value is valid
+                if (!isError) {
+                    displayValue = value
+                    onAmountChanged(doubleValue)
                 }
             },
             singleLine = true,
@@ -118,6 +122,18 @@ fun TextRowWithDoubleInputTextField(
         )
     }
 }
+private fun formatAmount(amount: Double?): String {
+    return if (amount == null) {
+        ""
+    } else if (amount == amount.toLong().toDouble() ) {
+        // No decimal digits, remove .0
+        amount.toLong().toString()
+    } else {
+        // Keep decimal digits
+        amount.toString()
+    }
+}
+
 @Composable
 fun TextRowWithStringInputTextField(
     text: String,

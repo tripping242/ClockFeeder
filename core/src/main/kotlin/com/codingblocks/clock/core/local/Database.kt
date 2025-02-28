@@ -25,6 +25,7 @@ import com.codingblocks.clock.core.local.dao.CustomNFTAlertDao
 import com.codingblocks.clock.core.local.dao.FTPriceDao
 import com.codingblocks.clock.core.local.dao.FeedFTDao
 import com.codingblocks.clock.core.local.dao.FeedNFTDao
+import com.codingblocks.clock.core.local.dao.FeedToClockItemDao
 import com.codingblocks.clock.core.local.dao.NFTStatsDao
 import com.codingblocks.clock.core.local.dao.PositionsDao
 import com.codingblocks.clock.core.local.dao.TokenLogoDao
@@ -34,6 +35,7 @@ import com.codingblocks.clock.core.local.data.CustomNFTAlert
 import com.codingblocks.clock.core.local.data.FTPriceEntity
 import com.codingblocks.clock.core.local.data.FeedFT
 import com.codingblocks.clock.core.local.data.FeedNFT
+import com.codingblocks.clock.core.local.data.FeedToClockItem
 import com.codingblocks.clock.core.local.data.NFTStatsEntity
 import com.codingblocks.clock.core.local.data.PositionFTLocal
 import com.codingblocks.clock.core.local.data.PositionLPLocal
@@ -43,8 +45,8 @@ import com.codingblocks.clock.core.local.data.WatchListConfig
 
 
 @Database(
-    entities = [PositionFTLocal::class, PositionNFTLocal::class, PositionLPLocal::class, WatchListConfig::class, FeedFT:: class, FeedNFT::class, CustomFTAlert::class, CustomNFTAlert::class, TokenLogo::class, NFTStatsEntity::class, FTPriceEntity::class],
-    version = 4,
+    entities = [PositionFTLocal::class, PositionNFTLocal::class, PositionLPLocal::class, WatchListConfig::class, FeedFT:: class, FeedNFT::class, CustomFTAlert::class, CustomNFTAlert::class, TokenLogo::class, NFTStatsEntity::class, FTPriceEntity::class, FeedToClockItem::class],
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(ZonedDateTimeConverter::class)
@@ -62,6 +64,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun getLogoDao(): TokenLogoDao
     abstract fun getNFTStatsDao(): NFTStatsDao
     abstract fun getFTPriceDao(): FTPriceDao
+    abstract fun getFeedTheClockDao(): FeedToClockItemDao
 
 }
 

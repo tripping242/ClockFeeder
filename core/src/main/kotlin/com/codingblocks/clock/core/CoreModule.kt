@@ -17,7 +17,6 @@
 
 package com.codingblocks.clock.core
 
-import android.content.Context
 import androidx.room.Room
 import androidx.work.WorkManager
 import com.codingblocks.clock.core.local.AppDatabase
@@ -26,7 +25,6 @@ import com.codingblocks.clock.core.remote.remoteModule
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.koin.android.ext.koin.androidContext
-import org.koin.androidx.workmanager.dsl.worker
 import org.koin.androidx.workmanager.dsl.workerOf
 import org.koin.dsl.module
 
@@ -59,8 +57,15 @@ internal val coreModule = module {
         )
     }
 
+    single {
+        FeedCycler(
+            dataRepo = get()
+        )
+    }
+
     workerOf(::FetchPricesWorker)
     workerOf(::NFTAlertWorker)
+    workerOf(::FTAlertWorker)
 }
 
 val coreModules = listOf(coreModule, remoteModule)

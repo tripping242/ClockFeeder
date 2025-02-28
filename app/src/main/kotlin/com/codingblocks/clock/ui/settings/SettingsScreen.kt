@@ -3,10 +3,10 @@ package com.codingblocks.clock.ui.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -25,12 +25,7 @@ import com.codingblocks.clock.R
 import com.codingblocks.clock.base.ui.scaffold.AppScaffold
 import com.codingblocks.clock.base.ui.theme.md_theme_light_error
 import com.codingblocks.clock.base.ui.utils.formatMax8decimals
-import com.codingblocks.clock.base.ui.utils.formatToNoDecimals
-import com.codingblocks.clock.core.local.data.PositionFTLocal
-import com.codingblocks.clock.core.local.data.PositionLPLocal
-import com.codingblocks.clock.core.local.data.PositionNFTLocal
-import com.codingblocks.clock.core.local.data.formattedHHMM
-import okhttp3.internal.toImmutableList
+import com.codingblocks.clock.core.local.data.FeedToClockItem
 import org.koin.androidx.compose.getViewModel
 
 @Composable
@@ -47,8 +42,28 @@ fun SettingsScreen(
         Column(
             modifier = Modifier
                 .padding(16.dp)
-                .fillMaxSize(),
+                .fillMaxWidth()
+                .wrapContentHeight(),
         ) {
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+            ) {
+                Button(
+                    modifier = Modifier,
+                    onClick = { viewModel.dispatch(SettingsViewModel.Action.StartClockFeedCycler) },
+                ) {
+                    Text(text = "START CYCLING FEED")
+                }
+                Button(
+                    modifier = Modifier,
+                    onClick = { viewModel.dispatch(SettingsViewModel.Action.PauseClockFeedCycler) },
+                ) {
+                    Text(text = "PAUSE CYCLING FEED")
+                }
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth(),
@@ -56,21 +71,19 @@ fun SettingsScreen(
             ) {
                 Button(
                     modifier = Modifier,
-                    onClick = { viewModel.dispatch(SettingsViewModel.Action.GetPositionsFT) },
+                    onClick = {
+                        viewModel.dispatch(SettingsViewModel.Action.LoadAndUpdateFeedFTToClockItems)
+                    },
                 ) {
-                    Text(text = " FT")
+                    Text(text = "RELOAD FT")
                 }
                 Button(
                     modifier = Modifier,
-                    onClick = { viewModel.dispatch(SettingsViewModel.Action.GetPositionsNFT) },
+                    onClick = {
+                        viewModel.dispatch(SettingsViewModel.Action.LoadAndUpdateFeedNFTToClockItems)
+                    },
                 ) {
-                    Text(text = "NFT")
-                }
-                Button(
-                    modifier = Modifier,
-                    onClick = { viewModel.dispatch(SettingsViewModel.Action.GetPositionsLP) },
-                ) {
-                    Text(text = " LP")
+                    Text(text = "RELOAD NFT")
                 }
             }
             state.error?.let {
@@ -79,49 +92,23 @@ fun SettingsScreen(
                     color = md_theme_light_error,
                 )
             }
-            val positionsFT = state.positionsFT.toImmutableList()
-            val positionsNFT = state.positionsNFT.toImmutableList()
-            val positionsLP = state.positionsLP.toImmutableList()
 
-            when (state.showType) {
-                SettingsViewModel.ShowType.FT -> {
+            if (state.feedToClockItems.isNotEmpty()) {
                     LazyColumn(
                         state = lazyListState,
                         modifier = Modifier.padding(vertical = 4.dp),
                     ) {
-                        items(positionsFT) { positionFT ->
-                            PositionFTItem(item = positionFT)
+                        items(state.feedToClockItems) { item ->
+                            FeedToClock(item = item)
                         }
                     }
-                }
-                SettingsViewModel.ShowType.NFT -> {
-                    LazyColumn(
-                        state = lazyListState,
-                        modifier = Modifier.padding(vertical = 4.dp),
-                    ) {
-                        items(positionsNFT) { positionNFT ->
-                            PositionNFTItem(item = positionNFT)
-                        }
-                    }
-                }
-                SettingsViewModel.ShowType.LP -> {
-                    LazyColumn(
-                        state = lazyListState,
-                        modifier = Modifier.padding(vertical = 4.dp),
-                    ) {
-                        items(positionsLP) { positionLP ->
-                            PositionLPItem(item = positionLP)
-                        }
-                    }
-
-                }
             }
         }
     }
 }
 
 @Composable
-fun PositionNFTItem(item: PositionNFTLocal) {
+fun FeedToClock(item: FeedToClockItem) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -140,54 +127,10 @@ fun PositionNFTItem(item: PositionNFTLocal) {
             modifier = Modifier.width(120.dp), // Adjust width as needed
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(text = item.balance.formatMax8decimals(), modifier = Modifier.weight(1f))
-            Text(text = item.adaValue.formatToNoDecimals(), modifier = Modifier.weight(1f))
+            item.price?.let { Text(text = it.formatMax8decimals(), modifier = Modifier.weight(1f)) }
+            Text(text = item.feedType.name, modifier = Modifier.weight(1f))
         }
 
-        Text(text = item.lastUpdated.formattedHHMM())
-    }
-}
-
-@Composable
-fun PositionLPItem(item: PositionLPLocal) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-        modifier = Modifier
-            .padding(4.dp)
-            .fillMaxWidth(),
-    ) {
-        Text(
-            text = item.ticker.removeSuffix(" LP"),
-            modifier = Modifier
-                .width(100.dp)
-                .padding(end = 16.dp),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-
-        Text(text = item.tokenAAmount.formatToNoDecimals(), modifier = Modifier.width(100.dp).padding(end = 16.dp),)
-        Text(text = (item.adaValue / 2).formatToNoDecimals(), modifier = Modifier.width(60.dp),)
-
-        Text(text = item.lastUpdated.formattedHHMM())
-    }
-}
-
-@Composable
-fun PositionFTItem(item: PositionFTLocal) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-        modifier = Modifier
-            .padding(4.dp)
-            .fillMaxWidth(),
-    ) {
-        Text(text = item.ticker)
-
-        Text(text = item.balance.formatMax8decimals())
-
-        Text(text = item.adaValue.formatToNoDecimals())
-
-        Text(text = item.lastUpdated.formattedHHMM())
+        Text(text = item.orderIndex.toString())
     }
 }

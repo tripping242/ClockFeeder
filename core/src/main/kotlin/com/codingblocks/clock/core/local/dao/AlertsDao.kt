@@ -24,6 +24,10 @@ interface CustomFTAlertDao {
 
     @Query("DELETE FROM customFTAlert WHERE feedPositionUnit = :positionUnit")
     suspend fun deleteAlertsForFeed(positionUnit: String)
+
+    @Query("SELECT * FROM CustomFTAlert WHERE isEnabled = 1")
+    suspend fun getAllEnabledAlerts(): List<CustomFTAlert>
+
 }
 
 @Dao

@@ -52,6 +52,7 @@ class OverviewViewModel(
                             // start getting price info
                             dataRepo.schedulePeriodicFetching()
                             dataRepo.scheduleNFTAlertWorker()
+                            dataRepo.scheduleFTAlertWorker()
 
                         } catch (e: Exception) {
                             Timber.d("could not start workers feeds $e")

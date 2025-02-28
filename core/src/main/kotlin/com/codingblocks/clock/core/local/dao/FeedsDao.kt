@@ -29,6 +29,9 @@ interface FeedFTDao {
     @Query("SELECT * FROM feedFT ORDER by lastUpdatedAt DESC")
     suspend fun getAllFeedFT(): List<FeedFT>
 
+    @Query("SELECT * FROM feedFT WHERE feedClockPrice = 1 ORDER by lastUpdatedAt DESC")
+    suspend fun getAllFeedFTClockEnabled(): List<FeedFT>
+
     @Query("SELECT DISTINCT positionUnit FROM feedFT")
     fun getAllFTUnitsFromFeed(): List<String>
 
@@ -56,6 +59,9 @@ interface FeedNFTDao {
 
     @Query("SELECT * FROM feedNFT ORDER by lastUpdatedAt DESC")
     suspend fun getAllFeedNFT(): List<FeedNFT>
+
+    @Query("SELECT * FROM feedNFT WHERE feedClockPrice = 1 ORDER by lastUpdatedAt DESC")
+    suspend fun getAllFeedNFTClockEnabled(): List<FeedNFT>
 
     @Query("SELECT DISTINCT positionPolicy FROM feedNFT")
     fun getAllNFTPoliciesFromFeed(): List<String>
