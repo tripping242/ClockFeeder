@@ -7,11 +7,13 @@ import com.burgstaller.okhttp.digest.CachingAuthenticator
 import com.burgstaller.okhttp.digest.Credentials
 import com.burgstaller.okhttp.digest.DigestAuthenticator
 import com.codingblocks.clock.core.database.ClockDatabase
+import com.codingblocks.clock.core.local.data.ColorMode
 import com.codingblocks.clock.core.model.clock.OverUnderResponse
 import com.codingblocks.clock.core.model.clock.StatusResponse
 import com.codingblocks.clock.core.remote.ClockApi
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
@@ -34,9 +36,9 @@ interface ClockManager {
     suspend fun getStatus(): Result<StatusResponse>
     suspend fun sendFTPriceFeed(encodedPrice: String, pair: String): Result<Any>
     suspend fun setOverUnderText(position: Int, over: String, under: String): Result<OverUnderResponse>
-    /*suspend fun sendNFTPriceAlert()
-    suspend fun sendFTPriceFeed()
-    suspend fun sendNFTPriceFeed()*/
+
+    suspend fun color(colorMode: ColorMode): Result<Any>
+
 }
 
 class ClockManagerImpl private constructor(
@@ -99,6 +101,46 @@ class ClockManagerImpl private constructor(
 
     override suspend fun setOverUnderText(position: Int, over: String, under: String): Result<OverUnderResponse> = safeCall(api) {
         setOverUnderText(position, over, under)
+    }
+
+    override suspend fun color(colorMode: ColorMode): Result<Any> = safeCall(api) {
+        when (colorMode) {
+            ColorMode.BlinkOnce -> flashStandard()
+            ColorMode.BlinkUp -> {
+                lightColor("00FF00")
+                flashStandard()
+            }
+            ColorMode.BlinkUpMuch -> {
+                lightColor("00FF00")
+                delay(80)
+                lightColor("00FF2B")
+                delay(80)
+                lightColor("88FF01")
+                flashStandard()
+            }
+            ColorMode.BlinkDownMuch -> {
+                lightColor("FF1107")
+                delay(80)
+                lightColor("FF1400")
+                delay(80)
+                lightColor("FF1107")
+                flashStandard()
+            }
+            ColorMode.BlinkDown -> {
+                lightColor("FF1107")
+                flashStandard()
+            }
+
+            ColorMode.BlinkAlert -> {
+                flashStandard()
+                lightColor("0030FF")
+                delay(80)
+                flashStandard()
+                delay(80)
+                lightColor("0030FF")
+                flashStandard()
+            }
+        }
     }
 
     private fun provideApi(password: String?, ipAddress: String?): ClockApi? {

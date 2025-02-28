@@ -109,7 +109,7 @@ class FTAlertWorker(
             ""
         }
 
-        Timber.tag("wims").i("message: $message")
+        Timber.tag("wims").i("message trigger alert: $message")
         if (alert.pushAlert) {
             //dataRepo.pushAlert(alert.ticker, message)
         }

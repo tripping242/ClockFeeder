@@ -30,6 +30,7 @@ import androidx.work.PeriodicWorkRequest
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.codingblocks.clock.core.local.AppDatabase
+import com.codingblocks.clock.core.local.data.ColorMode
 import com.codingblocks.clock.core.local.data.CustomFTAlert
 import com.codingblocks.clock.core.local.data.CustomNFTAlert
 import com.codingblocks.clock.core.local.data.FTPriceEntity
@@ -86,10 +87,10 @@ interface DataRepo {
     suspend fun resumeBlockClock()
 
     suspend fun getClockStatus(): Result<StatusResponse>
-    suspend fun sendFTPriceFeed(encodedPrice: String, pair: String): Result<Any>
-    suspend fun sendFTPriceFeed(name: String, price: Int)
-    /*suspend fun sendFTPriceFeed()
-    suspend fun sendNFTPriceFeed()*/
+    suspend fun sendFTPriceFeed(encodedPrice: String, pair: String, colorMode: ColorMode?): Result<Any>
+    suspend fun sendNFTPriceFeed(name: String, price: Int, colorMode: ColorMode?)
+    /*suspend fun sendFTPriceAlert()
+    suspend fun sendNFTPriceAlert()*/
 
     // wallet with address
     suspend fun resolveAdaHandle(handle: String): Result<String>
@@ -329,21 +330,20 @@ class CoreDataRepo(
         get() = settingsManager.settings.feedClockCycleSeconds * 1000.toLong()
 
     override suspend fun getClockStatus(): Result<StatusResponse> = clockManager.getStatus()
-    override suspend fun sendFTPriceFeed(encodedPrice: String, pair: String) = clockManager.sendFTPriceFeed(encodedPrice, pair)
-    override suspend fun sendFTPriceFeed(name: String, price: Int) {
+    override suspend fun sendFTPriceFeed(encodedPrice: String, pair: String, colorMode: ColorMode?): Result<Any> {
+        val sendSuccess = clockManager.sendFTPriceFeed(encodedPrice, pair)
+            .onSuccess { if (colorMode!=null) clockManager.color(colorMode) }
+        return sendSuccess
+    }
+    override suspend fun sendNFTPriceFeed(name: String, price: Int, colorMode: ColorMode?) {
         val formattedPrice = formatNFTPrice(price)
         val nameChunks = splitAndFormatName(name)
         for ((position, over, under) in nameChunks) {
             clockManager.setOverUnderText(position, over, under)
         }
         clockManager.setOverUnderText(6, formattedPrice, "ADA")
+        if (colorMode!=null) clockManager.color(colorMode)
     }
-
-    /*override suspend fun sendNFTPriceAlert() = clockManager.sendNFTPriceAlert()
-
-    override suspend fun sendFTPriceFeed() = clockManager.sendFTPriceFeed()
-
-    override suspend fun sendNFTPriceFeed() = clockManager.sendNFTPriceFeed()*/
 
     override suspend fun resolveAdaHandle(handle: String): Result<String> =
         blockFrostManager.resolveAdaHandle(handle)
@@ -622,73 +622,118 @@ class CoreDataRepo(
 
     override suspend fun loadAndUpdateFeedFTToClockItems() {
         val validTime = System.currentTimeMillis() - (settingsManager.settings.priceTooOldSeconds * 1000)
+        val previousValidTime = System.currentTimeMillis() - (3 * settingsManager.settings.feedClockCycleSeconds * 1000)
         feedFTDao.getAllFeedFTClockEnabled().forEach { item ->
-            val price = ftPriceDao.getLatestValidPriceForUnit(item.positionUnit, validTime)?.price
-            if (price != null) {
-                // todo we can also map other values if updated, like colorcoding on, colorMode?
-                // val colorStart =
+
+            val latestPrice  = ftPriceDao.getLatestValidPricesForUnit(item.positionUnit, validTime,1)?.get(0)?.price
+
+            if (latestPrice  != null) {
+                var percentageChange: Double? = null
+                if (item.feedClockVolume) {
+                    val previousPrice =
+                        try {
+                            ftPriceDao.getLatestValidPricesForUnit(item.positionUnit, previousValidTime,2)?.get(1)?.price
+                        } catch (e: Exception) {
+                            null
+                        }
+                    percentageChange = if (previousPrice != null && previousPrice != 0.0) {
+                        ((latestPrice - previousPrice) / previousPrice) * 100
+                    } else {
+                        null
+                    }
+                }
+
+                val colorMode = when {
+                    percentageChange == null -> null
+                    // todo et these limits manually in settings?
+                    percentageChange > 5.0 -> ColorMode.BlinkUpMuch
+                    percentageChange > 0.1 -> ColorMode.BlinkUp
+                    percentageChange < -5.0 -> ColorMode.BlinkDownMuch
+                    percentageChange < -0.1 -> ColorMode.BlinkDown
+                    else -> ColorMode.BlinkOnce
+                }
                 val existingFeedTheClockItem = feedTheclockDao.getByUnit(item.positionUnit)
                 if (existingFeedTheClockItem != null) {
-                    feedTheclockDao.update(existingFeedTheClockItem.copy(price = price))
+                    feedTheclockDao.update(existingFeedTheClockItem.copy(price = latestPrice, colorMode = colorMode))
                 } else {
                     // add new feedToClockItem
                     feedTheclockDao.insertAtEnd(
                         FeedToClockItem(
                             unit = item.positionUnit,
                             name = item.name,
-                            price = price,
+                            price = latestPrice ,
                             feedType = FeedType.FeedFT,
+                            colorMode = colorMode,
                             orderIndex = 0,
                         )
                     )
                 }
-            } else {
-                // trigger loadprices once and retry loadUpdate...
-                // or let this be done before we call this loadAndUpdateFeedToClockItems
             }
-
         }
     }
 
     override suspend fun loadAndUpdateFeedNFTToClockItems() {
         val validTime = System.currentTimeMillis() - (settingsManager.settings.priceTooOldSeconds * 1000)
+        val previousValidTime = System.currentTimeMillis() - (3 * settingsManager.settings.feedClockCycleSeconds * 1000)
         feedNFTDao.getAllFeedNFTClockEnabled().forEach { item ->
-            Timber.tag("wims").i("FeedNFTClockEnabled item ${item.name} with price: ${item.feedClockPrice}")
-            val price = nftStatsDao.getLatestValidPriceForPolicy(item.positionPolicy, validTime)?.price
-            Timber.tag("wims").i("    stored latest price = $price ")
-            if (price != null) {
-                // todo we can also map other values if updated, like colorcoding on, colorMode?
-                // val colorStart =
+            val latestPrice = nftStatsDao.getLatestValidPricesForPolicy(item.positionPolicy, validTime, 1)?.get(0)?.price
+
+
+            if (latestPrice != null) {
+                var percentageChange: Double? = null
+                if (item.feedClockVolume) {
+                    val previousPrice =
+                        try {
+                            nftStatsDao.getLatestValidPricesForPolicy(item.positionPolicy, previousValidTime,2)?.get(1)?.price
+                        } catch (e: Exception) {
+                            null
+                        }
+                    percentageChange = if (previousPrice != null && previousPrice != 0.0) {
+                        ((latestPrice - previousPrice) / previousPrice) * 100
+                    } else {
+                        null
+                    }
+                }
+
+                val colorMode = when {
+                    percentageChange == null -> null
+                    // todo et these limits manually in settings?
+                    percentageChange > 5.0 -> ColorMode.BlinkUpMuch
+                    percentageChange > 0.1 -> ColorMode.BlinkUp
+                    percentageChange < -5.0 -> ColorMode.BlinkDownMuch
+                    percentageChange < -0.1 -> ColorMode.BlinkDown
+                    else -> ColorMode.BlinkOnce
+                }
+
                 val existingFeedTheClockItem = feedTheclockDao.getByUnit(item.positionPolicy)
                 if (existingFeedTheClockItem != null) {
-                    feedTheclockDao.update(existingFeedTheClockItem.copy(price = price))
+                    feedTheclockDao.update(existingFeedTheClockItem.copy(price = latestPrice, colorMode = colorMode))
                 } else {
                     // add new feedToClockItem
                     feedTheclockDao.insertAtEnd(
                         FeedToClockItem(
                             unit = item.positionPolicy,
                             name = item.name,
-                            price = price,
+                            price = latestPrice,
                             feedType = FeedType.FeedNFT,
+                            colorMode = colorMode,
                             orderIndex = 0,
                         )
                     )
                 }
-            } else {
-                // trigger loadprices once and retry loadUpdate...
-                // or let this be done before we call this loadAndUpdateFeedToClockItems
             }
-
         }
     }
 
     override suspend fun addAlertFTToFeedToClockItems(alert: CustomFTAlert, reachedPrice: Double) {
+        Timber.tag("wims").i("ALERT being added to front of the Clock feed")
         val feedToClockItem = FeedToClockItem(
             unit = "alert",
             name = alert.ticker,
             price = reachedPrice,
             feedType = FeedType.AlertFT,
             deleteWhenDone = true,
+            colorMode = ColorMode.BlinkAlert,
             orderIndex = 0,
         )
         feedTheclockDao.insertAtFront(feedToClockItem)
@@ -698,7 +743,16 @@ class CoreDataRepo(
         alert: CustomNFTAlert,
         reachedPrice: Double
     ) {
-        TODO("Not yet implemented")
+        val feedToClockItem = FeedToClockItem(
+            unit = "alert",
+            name = alert.ticker,
+            price = reachedPrice,
+            feedType = FeedType.AlertNFT,
+            deleteWhenDone = true,
+            colorMode = ColorMode.BlinkAlert,
+            orderIndex = 0,
+        )
+        feedTheclockDao.insertAtFront(feedToClockItem)
     }
 
     override fun getAllFeedToClockItems(): List<FeedToClockItem> =

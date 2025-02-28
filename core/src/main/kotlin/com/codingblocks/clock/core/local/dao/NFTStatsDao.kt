@@ -20,6 +20,6 @@ interface NFTStatsDao {
     @Query("SELECT * FROM nft_stats WHERE policy = :policy ORDER BY timestamp DESC LIMIT 1")
     suspend fun getLatestPriceForPolicy(policy: String): NFTStatsEntity?
 
-    @Query("SELECT * FROM nft_stats WHERE policy = :policy AND timestamp >= :validTime ORDER BY timestamp DESC LIMIT 1")
-    suspend fun getLatestValidPriceForPolicy(policy: String, validTime: Long): NFTStatsEntity?
+    @Query("SELECT * FROM nft_stats WHERE policy = :policy AND timestamp >= :validTime ORDER BY timestamp DESC LIMIT :limit")
+    suspend fun getLatestValidPricesForPolicy(policy: String, validTime: Long, limit: Int): List<NFTStatsEntity>?
 }

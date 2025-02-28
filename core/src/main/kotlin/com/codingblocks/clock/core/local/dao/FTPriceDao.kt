@@ -24,6 +24,6 @@ interface FTPriceDao {
     @Query("SELECT * FROM ft_prices WHERE unit = :unit ORDER BY timestamp DESC LIMIT 1")
     suspend fun getLatestPriceForUnit(unit: String): FTPriceEntity?
 
-    @Query("SELECT * FROM ft_prices WHERE unit = :unit AND timestamp >= :validTime ORDER BY timestamp DESC LIMIT 1")
-    suspend fun getLatestValidPriceForUnit(unit: String, validTime: Long): FTPriceEntity?
+    @Query("SELECT * FROM ft_prices WHERE unit = :unit AND timestamp >= :validTime ORDER BY timestamp DESC LIMIT :limit")
+    suspend fun getLatestValidPricesForUnit(unit: String, validTime: Long, limit: Int): List<FTPriceEntity>?
 }

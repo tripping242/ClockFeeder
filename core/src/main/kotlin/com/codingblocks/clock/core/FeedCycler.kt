@@ -71,7 +71,7 @@ class FeedCycler(
             FeedType.FeedFT -> {
                 val encodedPrice = "/${formatPrice(item.price.toString())}"
                 val pair = formatPair(item.name)
-                dataRepo.sendFTPriceFeed(encodedPrice, pair)
+                dataRepo.sendFTPriceFeed(encodedPrice, pair, item.colorMode)
                     .onFailure { throwable ->
                         if (throwable is ClockApiError.TooManyRequests) {
                             Timber.tag("wims").i("we will wait for ${throwable.waitTime}")
@@ -85,7 +85,7 @@ class FeedCycler(
             }
             FeedType.FeedNFT -> {
                 item.price?.let {
-                    dataRepo.sendFTPriceFeed(item.name, price = item.price.toInt())
+                    dataRepo.sendNFTPriceFeed(item.name, price = item.price.toInt(), item.colorMode)
                 }
                 Pair(true, 0)
             }

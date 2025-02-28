@@ -20,10 +20,10 @@ interface ClockApi {
     suspend fun pauseClock(): Response<ResponseBody>
 
     @GET("lights/flash")
-    suspend fun flashStandard(): ResponseBody
+    suspend fun flashStandard(): Response<ResponseBody>
 
     @GET("lights/{color}")
-    suspend fun lightColor(@Path("color") color: String): ResponseBody
+    suspend fun lightColor(@Path("color") color: String): Response<ResponseBody>
 
     @GET("show/text//BAR")
     suspend fun setTextFoo(): ResponseBody
