@@ -440,7 +440,7 @@ fun FeedNFTItem(
             }
         },
         expandedContent = {
-            val alerts = item.alerts
+            val alerts = item.alerts.sortedByDescending { it.threshold }
             LazyColumn(
                 state = state,
                 modifier = Modifier
@@ -621,8 +621,6 @@ fun FeedFTItem(
                         .fillMaxWidth(),
                 ) {
                     Text(
-                        // todo we need to also pack in the name silly
-                        // and maybe icon link
                         text = item.feedFT.name,
                         modifier = Modifier
                             .width(100.dp)
@@ -685,7 +683,7 @@ fun FeedFTItem(
             }
         },
         expandedContent = {
-            val alerts = item.alerts
+            val alerts = item.alerts.sortedByDescending { it.threshold }
             LazyColumn(
                 state = state,
                 modifier = Modifier

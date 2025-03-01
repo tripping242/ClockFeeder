@@ -13,6 +13,7 @@ import timber.log.Timber
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
+import kotlin.math.roundToInt
 
 class FeedCycler(
     private val dataRepo: DataRepo
@@ -64,11 +65,10 @@ class FeedCycler(
     }
 
     private suspend fun processItem(item: FeedToClockItem) : Pair<Boolean, Long> {
-        Timber.tag("wims").i("could be doing something like display on clock")
-        // Implement your logic to process the item (e.g., display it)
+        Timber.tag("wims").i("processItem ${item.feedType}")
         return when (item.feedType) {
             FeedType.FeedFT -> {
-                val encodedPrice = "/${formatPrice(item.price.toString())}"
+                val encodedPrice = "/${formatPrice(item.price!!)}"
                 val pair = formatPair(item.name)
                 dataRepo.sendFTPriceFeed(encodedPrice, pair, item.colorMode)
                     .onFailure { throwable ->
@@ -76,7 +76,7 @@ class FeedCycler(
                             Timber.tag("wims").i("we will wait for ${throwable.waitTime}")
                             Pair(false, throwable.waitTime.toLong())
                         } else {
-                            // skip?
+                            // skip
                             Pair(true, 0)
                         }
                     }
@@ -84,11 +84,13 @@ class FeedCycler(
             }
             FeedType.FeedNFT -> {
                 item.price?.let {
-                    dataRepo.sendNFTPriceFeed(item.name, price = item.price.toInt(), item.colorMode)
+                    dataRepo.sendNFTPriceFeed(item.name, price = item.price.roundToInt(), item.colorMode)
                 }
                 Pair(true, 0)
             }
             FeedType.AlertFT -> {
+
+
                 Pair(true, 0)
             }
             FeedType.AlertNFT -> {
@@ -102,7 +104,7 @@ class FeedCycler(
     }
 
     private fun formatPair(name: String): String {
-        return name.take(4).uppercase() + "/ADA"
+        return name.take(5).uppercase() + "/ADA"
     }
 
     @SuppressLint("DefaultLocale")
@@ -174,8 +176,18 @@ fun formatPrice(input: String): String {
     Timber.tag("wims").i("price $price")
 
     val returnValue = replaceEmptySpace(price)
-    Timber.tag("wims").i("returned value :$returnValue")
     return returnValue
+}
+
+@SuppressLint("DefaultLocale")
+fun formatPrice(price: Double): String {
+    return when {
+        price >= 100_000 -> String.format("%.1fk", price / 1_000).take(5) // 123456 → "123k"
+        price >= 1_000 -> String.format("%.0f", price).take(5) // 4521 → "4521"
+        price >= 1.0 -> String.format("%.2f", price).take(5) // 12.34 → "12.34"
+        price >= 0.001 -> String.format("%.4f", price).trimEnd('0').take(5) // 0.012345 → "0.012"
+        else -> DecimalFormat("0.0E0").format(price).take(5) // Use scientific notation
+    }
 }
 
 fun replaceEmptySpace(price: String) : String =

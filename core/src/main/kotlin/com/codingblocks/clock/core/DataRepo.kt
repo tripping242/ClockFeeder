@@ -598,7 +598,6 @@ class CoreDataRepo(
                                 price = result.price,
                                 sales = result.sales,
                                 supply = result.supply,
-                                topOffer = result.topOffer,
                                 volume = result.volume
                             )
                             nftStatsDao.insert(nftStatsEntity)
@@ -622,13 +621,13 @@ class CoreDataRepo(
 
     override suspend fun loadAndUpdateFeedFTToClockItems() {
         val validTime = System.currentTimeMillis() - (settingsManager.settings.priceTooOldSeconds * 1000)
-        val previousValidTime = System.currentTimeMillis() - (3 * settingsManager.settings.feedClockCycleSeconds * 1000)
+        val previousValidTime = System.currentTimeMillis() - (3 * settingsManager.settings.priceTooOldSeconds * 1000)
         feedFTDao.getAllFeedFTClockEnabled().forEach { item ->
+            Timber.tag("wims").i("FeedFTOToClock item $item.name}")
 
-            val latestPrice  = ftPriceDao.getLatestValidPricesForUnit(item.positionUnit, validTime,1)?.get(0)?.price
-
+            val latestPrice  = ftPriceDao.getLatestValidPricesForUnit(item.positionUnit, validTime,1)?.getOrNull(0)?.price
+            Timber.tag("wims").i("          has latetestPrice: $latestPrice")
             if (latestPrice  != null) {
-                Timber.tag("wims").i("item ${item.name} has latetestPrice: $latestPrice")
                 var percentageChange: Double? = null
                 if (item.feedClockVolume) {
                     val previousPrice =
@@ -637,7 +636,7 @@ class CoreDataRepo(
                         } catch (e: Exception) {
                             null
                         }
-                    Timber.tag("wims").i("      has previousPrice: $previousPrice")
+                    Timber.tag("wims").i("          has previousPrice: $previousPrice")
                     percentageChange = if (previousPrice != null && previousPrice != 0.0) {
                         ((latestPrice - previousPrice) / previousPrice) * 100
                     } else {
@@ -676,10 +675,11 @@ class CoreDataRepo(
 
     override suspend fun loadAndUpdateFeedNFTToClockItems() {
         val validTime = System.currentTimeMillis() - (settingsManager.settings.priceTooOldSeconds * 1000)
-        val previousValidTime = System.currentTimeMillis() - (3 * settingsManager.settings.feedClockCycleSeconds * 1000)
+        val previousValidTime = System.currentTimeMillis() - (3 * settingsManager.settings.priceTooOldSeconds * 1000)
         feedNFTDao.getAllFeedNFTClockEnabled().forEach { item ->
-            val latestPrice = nftStatsDao.getLatestValidPricesForPolicy(item.positionPolicy, validTime, 1)?.get(0)?.price
-
+            Timber.tag("wims").i("FeedNFTToClock item $item}")
+            val latestPrice = nftStatsDao.getLatestValidPricesForPolicy(item.positionPolicy, validTime, 1)?.getOrNull(0)?.price
+            Timber.tag("wims").i("          has latetestPrice: $latestPrice")
 
             if (latestPrice != null) {
                 var percentageChange: Double? = null
@@ -690,6 +690,8 @@ class CoreDataRepo(
                         } catch (e: Exception) {
                             null
                         }
+                    Timber.tag("wims").i("          has previousPrice: $previousPrice")
+
                     percentageChange = if (previousPrice != null && previousPrice != 0.0) {
                         ((latestPrice - previousPrice) / previousPrice) * 100
                     } else {

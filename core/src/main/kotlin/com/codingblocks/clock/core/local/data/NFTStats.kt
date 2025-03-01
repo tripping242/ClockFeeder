@@ -13,7 +13,6 @@ data class NFTStatsEntity(
     val price: Double,
     val sales: Double,
     val supply: Int,
-    val topOffer: Double,
     val volume: Double,
     val timestamp: Long = System.currentTimeMillis(),
 )

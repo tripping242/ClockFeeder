@@ -19,7 +19,7 @@ interface CustomFTAlertDao {
     @Delete
     suspend fun delete(alert: CustomFTAlert)
 
-    @Query("SELECT * FROM customFTAlert WHERE feedPositionUnit = :positionUnit")
+    @Query("SELECT * FROM customFTAlert WHERE feedPositionUnit = :positionUnit ORDER BY threshold DESC")
     suspend fun getAlertsForFeed(positionUnit: String): List<CustomFTAlert>
 
     @Query("DELETE FROM customFTAlert WHERE feedPositionUnit = :positionUnit")
@@ -41,7 +41,7 @@ interface CustomNFTAlertDao {
     @Delete
     suspend fun delete(alert: CustomNFTAlert)
 
-    @Query("SELECT * FROM customNFTAlert WHERE feedPositionPolicy = :positionPolicy")
+    @Query("SELECT * FROM customNFTAlert WHERE feedPositionPolicy = :positionPolicy ORDER BY threshold DESC")
     suspend fun getAlertsForFeed(positionPolicy: String): List<CustomNFTAlert>
 
     @Query("DELETE FROM customNFTAlert WHERE feedPositionPolicy = :positionPolicy")

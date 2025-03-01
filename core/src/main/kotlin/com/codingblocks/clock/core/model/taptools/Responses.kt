@@ -9,7 +9,6 @@ data class NFTStatsResponse (
     val price: Double,
     val sales: Double,
     val supply: Int,
-    val topOffer: Double,
     val volume: Double,
 )
 
