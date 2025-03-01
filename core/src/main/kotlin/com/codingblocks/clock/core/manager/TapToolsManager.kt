@@ -3,6 +3,7 @@ package com.codingblocks.clock.core.manager
 import android.content.Context
 import com.codingblocks.clock.core.database.TapToolsDatabase
 import com.codingblocks.clock.core.interceptor.TapToolsKeyInterceptor
+import com.codingblocks.clock.core.model.taptools.InfoResponse
 import com.codingblocks.clock.core.model.taptools.NFTStatsResponse
 import com.codingblocks.clock.core.model.taptools.PositionsResponse
 import com.codingblocks.clock.core.model.taptools.TapToolsConfig
@@ -25,6 +26,7 @@ interface TapToolsManager {
     suspend fun getPositionsForAddress(address: String) : Result<PositionsResponse>
     suspend fun getPricesForTokens(list: List<String>) : Result<Map<String, Double>>
     suspend fun getStatsForPolicy(policy: String) : Result<NFTStatsResponse>
+    suspend fun getLogoForPolicy(policy: String) : Result<InfoResponse>
 }
 
 class TapToolsManagerImpl private constructor(
@@ -75,6 +77,10 @@ class TapToolsManagerImpl private constructor(
 
     override suspend fun getStatsForPolicy(policy: String): Result<NFTStatsResponse> = safeCall(api) {
         getStatsForPolicy(policy)
+    }
+
+    override suspend fun getLogoForPolicy(policy: String): Result<InfoResponse> = safeCall(api) {
+        getInfoForPolicy(policy)
     }
 
     private fun provideApi(key: String?): TapToolsApi? {

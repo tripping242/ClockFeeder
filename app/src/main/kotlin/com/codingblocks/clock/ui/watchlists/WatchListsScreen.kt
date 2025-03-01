@@ -1,5 +1,8 @@
 package com.codingblocks.clock.ui.watchlists
 
+import android.graphics.Bitmap
+import android.util.LruCache
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -43,6 +46,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
@@ -62,14 +67,17 @@ import com.codingblocks.clock.base.ui.theme.md_theme_light_error
 import com.codingblocks.clock.base.ui.theme.md_theme_light_secondary
 import com.codingblocks.clock.base.ui.utils.formatMax8decimals
 import com.codingblocks.clock.base.ui.utils.formatToNoDecimals
+import com.codingblocks.clock.core.decodeBase64ToBitmap
 import com.codingblocks.clock.core.local.data.PositionFTLocal
 import com.codingblocks.clock.core.local.data.PositionLPLocal
 import com.codingblocks.clock.core.local.data.PositionNFTLocal
 import com.codingblocks.clock.core.local.data.WatchListConfig
 import com.codingblocks.clock.core.local.data.WatchlistWithPositions
 import com.codingblocks.clock.core.local.data.formattedHHMM
+import com.codingblocks.clock.ui.utils.loadBase64WithGlide
 import com.codingblocks.clock.ui.watchlists.WatchListViewModel.PositionItem
 import com.codingblocks.clock.ui.watchlists.WatchListViewModel.ShowType
+import com.skydoves.landscapist.glide.GlideImage
 import org.koin.androidx.compose.getViewModel
 import timber.log.Timber
 import java.time.ZonedDateTime
@@ -121,7 +129,6 @@ fun WatchlistsScreen(
                             }
                         },
                         onSaveClick = { config ->
-                            // also reload showFTwithLp to update expanded part
                             viewModel.dispatch(WatchListViewModel.Action.SettingsChanged(config)) },
                         onFTAlertClicked = { unit, watchList ->
                             viewModel.dispatch(WatchListViewModel.Action.FTALertChanged(unit, watchList)) },
@@ -138,6 +145,7 @@ fun WatchlistsScreen(
                             viewModel.dispatch(WatchListViewModel.Action.DeleteWatchList(it))
                         },
                         currentWatchListWithPositions = item,
+                        logoCache = state.logoCache,
                         state = childLazyListState,
                     )
                 }
@@ -217,6 +225,7 @@ fun ExpandableItem(
     onConfirmDeleteClick: (Int) -> Unit,
     onReloadPositionsClick: (WatchListConfig) -> Unit,
     currentWatchListWithPositions: WatchlistWithPositions,
+    logoCache: LruCache<String, Bitmap>,
     state: LazyListState,
 ) {
 
@@ -335,8 +344,6 @@ fun ExpandableItem(
             }
         },
         expandedContent = {
-            var positionItems = getPositionItems(showType, currentWatchListWithPositions)
-
             Column(
                 modifier = Modifier
                     .padding(16.dp)
@@ -362,7 +369,7 @@ fun ExpandableItem(
                             },
 
                         ) {
-                            Text(text = "NTF")
+                            Text(text = "NFT")
                         }
                     }
                     if (!currentWatchListWithPositions.watchListConfig.includeLPinFT) {
@@ -389,6 +396,7 @@ fun ExpandableItem(
                             when (positionItem) {
                                 is PositionItem.FT -> PositionFTItem(
                                     item = positionItem.positionFT,
+                                    logoCache = logoCache,
                                     onAlertClicked = { onFTAlertClicked(positionItem.positionFT.unit, currentWatchListWithPositions.watchListConfig.watchlistNumber) }
                                 )
                                 is PositionItem.NFT -> PositionNFTItem(
@@ -726,6 +734,10 @@ fun PositionNFTItem(
             .padding(4.dp)
             .fillMaxWidth(),
     ) {
+        item.logo?.let {
+            LoadIPFSImage(it)
+        }
+
         Text(
             text = item.name, modifier = Modifier.width(160.dp), // Adjust width as needed
             maxLines = 1, overflow = TextOverflow.Ellipsis
@@ -744,12 +756,13 @@ fun PositionNFTItem(
                 .padding(end = 16.dp)
         )
 
-        Text(text = item.lastUpdated.formattedHHMM())
+        // Text(text = item.lastUpdated.formattedHHMM())
 
         IconButton(
             onClick = {
-                //showInFeed = !showInFeed
-                onAlertClicked.invoke()
+                if (item.showInFeed.not()) onAlertClicked.invoke() else {
+                    // todo dialog, to deactivate a feed, remove it in the feeds page
+                }
             },
             modifier = Modifier,
         ) {
@@ -793,6 +806,7 @@ fun PositionLPItem(
 @Composable
 fun PositionFTItem(
     item: PositionFTLocal,
+    logoCache: LruCache<String, Bitmap>,
     onAlertClicked: () -> Unit
 ) {
     Row(
@@ -802,6 +816,13 @@ fun PositionFTItem(
             .padding(4.dp)
             .fillMaxWidth(),
     ) {
+        item.logo?.let {
+            LogoImage(
+                item.unit,
+                it,
+                logoCache
+            )
+        }
         Text(
             text = item.ticker,
             modifier = Modifier
@@ -833,5 +854,63 @@ fun PositionFTItem(
         ) {
             AppIcon(icon = if (item.showInFeed) Icons.Outlined.NotificationsActive else Icons.Outlined.AddAlert)
         }
+    }
+}
+
+@Composable
+fun LoadIPFSImage(ipfsUrl: String) {
+    val formattedUrl = ipfsUrl.replace("ipfs://", "https://ipfs.io/ipfs/")
+
+    GlideImage(
+        imageModel = { formattedUrl },
+        modifier = Modifier
+            .size(24.dp)
+            .padding(end = 8.dp)
+    )
+}
+
+@Composable
+fun LogoImage(
+    unit: String,
+    base64String: String,
+    logoCache: LruCache<String, Bitmap>
+) {
+    // State to hold the bitmap
+    val bitmapState = remember { mutableStateOf<Bitmap?>(null) }
+
+    // Check the cache first
+    val cachedBitmap = logoCache.get(unit)
+    if (cachedBitmap != null) {
+        bitmapState.value = cachedBitmap
+    } else {
+        LaunchedEffect(unit) {
+            val bitmap = decodeBase64ToBitmap(base64String)
+            if (bitmap != null) {
+                /*// Store in cache
+                logoCache.put(unit, bitmap)*/
+                // Update state
+                bitmapState.value = bitmap
+            }
+        }
+    }
+
+    // Display the image
+    if (bitmapState.value != null) {
+        Image(
+            modifier = Modifier
+                .size(24.dp)
+                .padding(end = 8.dp),
+            bitmap = bitmapState.value!!.asImageBitmap(),
+            contentDescription = "Token Logo"
+        )
+    } else {
+        // Show a placeholder if the logo is not available
+        Image(
+            modifier = Modifier
+                .size(24.dp)
+                .padding(end = 8.dp),
+            painter = painterResource(id = R.drawable.ic_placeholder),
+            contentDescription = "Placeholder"
+        )
     }
 }

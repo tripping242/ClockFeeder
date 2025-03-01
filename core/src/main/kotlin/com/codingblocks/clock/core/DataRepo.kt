@@ -40,22 +40,27 @@ import com.codingblocks.clock.core.local.data.FeedNFT
 import com.codingblocks.clock.core.local.data.FeedNFTWithAlerts
 import com.codingblocks.clock.core.local.data.FeedToClockItem
 import com.codingblocks.clock.core.local.data.FeedType
+import com.codingblocks.clock.core.local.data.NFTLogo
 import com.codingblocks.clock.core.local.data.NFTStatsEntity
 import com.codingblocks.clock.core.local.data.PositionFTLocal
 import com.codingblocks.clock.core.local.data.PositionLPLocal
 import com.codingblocks.clock.core.local.data.PositionNFTLocal
+import com.codingblocks.clock.core.local.data.TokenLogo
 import com.codingblocks.clock.core.local.data.WatchListConfig
 import com.codingblocks.clock.core.local.data.WatchlistWithPositions
 import com.codingblocks.clock.core.manager.BlockFrostManager
 import com.codingblocks.clock.core.manager.BlockFrostManagerImpl
 import com.codingblocks.clock.core.manager.ClockManager
 import com.codingblocks.clock.core.manager.ClockManagerImpl
+import com.codingblocks.clock.core.manager.LogoManager
+import com.codingblocks.clock.core.manager.LogoManagerImpl
 import com.codingblocks.clock.core.manager.SettingsManager
 import com.codingblocks.clock.core.manager.SettingsManagerImpl
 import com.codingblocks.clock.core.manager.TapToolsManager
 import com.codingblocks.clock.core.manager.TapToolsManagerImpl
 import com.codingblocks.clock.core.model.AppBuildInfo
 import com.codingblocks.clock.core.model.blockfrost.BlockFrostConfig
+import com.codingblocks.clock.core.model.tokenlogo.LogoConfig
 import com.codingblocks.clock.core.model.clock.StatusResponse
 import com.codingblocks.clock.core.model.taptools.PositionsFt
 import com.codingblocks.clock.core.model.taptools.PositionsLp
@@ -75,6 +80,7 @@ interface DataRepo {
     val feedsNFTWithAlerts: List<FeedNFTWithAlerts>
 
     val cyclingDelayMiliseconds: Long
+    val logoCache:LruCache<String, Bitmap>
 
     // worker with price retrieval and storage
     fun schedulePeriodicFetching()
@@ -87,10 +93,26 @@ interface DataRepo {
     suspend fun resumeBlockClock()
 
     suspend fun getClockStatus(): Result<StatusResponse>
-    suspend fun sendFTPriceFeed(encodedPrice: String, pair: String, colorMode: ColorMode?): Result<Any>
+    suspend fun sendFTPriceFeed(
+        encodedPrice: String,
+        pair: String,
+        colorMode: ColorMode?
+    ): Result<Any>
+
     suspend fun sendNFTPriceFeed(name: String, price: Int, colorMode: ColorMode?)
-    suspend fun sendFTPriceAlert(name: String, reachedPrice: String, crossedPrice: String, colorMode: ColorMode?)
-    suspend fun sendNFTPriceAlert(name: String, reachedPrice: String, crossedPrice: String, colorMode: ColorMode?)
+    suspend fun sendFTPriceAlert(
+        name: String,
+        reachedPrice: String,
+        crossedPrice: String,
+        colorMode: ColorMode?
+    )
+
+    suspend fun sendNFTPriceAlert(
+        name: String,
+        reachedPrice: String,
+        crossedPrice: String,
+        colorMode: ColorMode?
+    )
 
     // wallet with address
     suspend fun resolveAdaHandle(handle: String): Result<String>
@@ -152,12 +174,16 @@ interface DataRepo {
     suspend fun deleteAlertsForFeedWithUnit(feedFT: FeedFT)
     suspend fun deleteAlertsForFeedWithPolicy(policy: String)
 
-    suspend fun getAllEnabledNFTAlerts():  List<CustomNFTAlert>
-    suspend fun getAllEnabledFTAlerts():  List<CustomFTAlert>
+    suspend fun getAllEnabledNFTAlerts(): List<CustomNFTAlert>
+    suspend fun getAllEnabledFTAlerts(): List<CustomFTAlert>
 
     // Logos
-    suspend fun getAndStoreRemoteLogo(policy: String)
-    suspend fun getLocalLogo(policy: String): Bitmap?
+    suspend fun getAndStoreRemoteLogo(unit: String)
+    suspend fun getLocalLogo(unit: String): Bitmap?
+    suspend fun checkOrGetRemoteLogo(position: PositionFTLocal)
+    suspend fun checkOrGetRemoteLogo(position: PositionNFTLocal)
+    suspend fun checkOrGetRemoteLogo(position: PositionLPLocal)
+
 
     // prices
     suspend fun getAndStorePricesForTokens()
@@ -174,11 +200,11 @@ interface DataRepo {
     suspend fun pushFTAlert(alert: CustomFTAlert, reachedPrice: Double)
     suspend fun pushNFTAlert(alert: CustomNFTAlert, reachedPrice: Double)
 
-    fun getAllFeedToClockItems() : List<FeedToClockItem>
-    fun deleteFeedToClockItem(item : FeedToClockItem)
+    fun getAllFeedToClockItems(): List<FeedToClockItem>
+    fun deleteFeedToClockItem(item: FeedToClockItem)
     fun deleteFeedToClockItemsForUnit(unit: String)
-    fun insertFeedToClockItem(item : FeedToClockItem)
-    fun moveFeedToClockItemToTheEnd(item : FeedToClockItem)
+    fun insertFeedToClockItem(item: FeedToClockItem)
+    fun moveFeedToClockItemToTheEnd(item: FeedToClockItem)
 }
 
 class CoreDataRepo(
@@ -193,7 +219,7 @@ class CoreDataRepo(
     private val clockManager: ClockManager = provideClockManager()
     private val blockFrostManager: BlockFrostManager = provideBlockFrostManager()
     private val settingsManager: SettingsManager = provideSettingsManager()
-
+    private val tokenLogoManager: LogoManager = provideTokenLogoManager()
     private val positionsDao = database.getPositionsDao()
     private val watchlistsDao = database.getWatchListsDao()
     private val feedFTDao = database.getFeedFTDao()
@@ -203,6 +229,8 @@ class CoreDataRepo(
     private val nftStatsDao = database.getNFTStatsDao()
     private val ftPriceDao = database.getFTPriceDao()
     private val feedTheclockDao = database.getFeedTheClockDao()
+    private val tokenLogoDao = database.getTokenLogoDao()
+    private val nftLogoDao = database.getNFTLogoDao()
 
     var fetchDelay: Long = 1 // todo move to settings
 
@@ -247,11 +275,11 @@ class CoreDataRepo(
         workManager.enqueue(immediateWorkRequest)
 
         val workRequest: PeriodicWorkRequest =
-        PeriodicWorkRequestBuilder<NFTAlertWorker>(
-            fetchDelay, TimeUnit.MINUTES
-        )
-            .setConstraints(constraints)
-            .build()
+            PeriodicWorkRequestBuilder<NFTAlertWorker>(
+                fetchDelay, TimeUnit.MINUTES
+            )
+                .setConstraints(constraints)
+                .build()
 
         workManager.enqueueUniquePeriodicWork(
             "NFTAlertWorker",
@@ -259,6 +287,7 @@ class CoreDataRepo(
             workRequest
         )
     }
+
     override fun scheduleFTAlertWorker() {
         Timber.tag("wims").i("scheduleFTAlertWorker")
 
@@ -292,7 +321,6 @@ class CoreDataRepo(
         clockManager.resumeBlockClock()
     }
 
-
     // use this from settings
     fun updateFetchDelay(newDelay: Long) {
         fetchDelay = newDelay
@@ -300,8 +328,7 @@ class CoreDataRepo(
         schedulePeriodicFetching() // Reschedule with the new delay
     }
 
-
-    private val memoryCache = LruCache<String, Bitmap>(200)
+    override val logoCache = LruCache<String, Bitmap>(200)
     private fun provideTapToolsManager(): TapToolsManager {
         return TapToolsManagerImpl.Builder(
             context, TapToolsConfig(appBuildInfo.tapToolsBaseUrl)
@@ -321,8 +348,16 @@ class CoreDataRepo(
             context, BlockFrostConfig(appBuildInfo.blockFrostBaseUrl)
         ).setOkHttpClient(okHttpClient).build()
     }
+
     private fun provideSettingsManager(): SettingsManager {
         return SettingsManagerImpl(context)
+    }
+
+    private fun provideTokenLogoManager(): LogoManager {
+        Timber.tag("wims").i("provideTokenLogoManager   ! with ${appBuildInfo.tokenCardanoBaseUrl}")
+        return LogoManagerImpl.Builder(
+            context, LogoConfig(appBuildInfo.tokenCardanoBaseUrl)
+        ).setOkHttpClient(okHttpClient).build()
     }
 
     override val watchlistsWithPositions: List<WatchlistWithPositions>
@@ -335,11 +370,16 @@ class CoreDataRepo(
         get() = settingsManager.settings.feedClockCycleSeconds * 1000.toLong()
 
     override suspend fun getClockStatus(): Result<StatusResponse> = clockManager.getStatus()
-    override suspend fun sendFTPriceFeed(encodedPrice: String, pair: String, colorMode: ColorMode?): Result<Any> {
+    override suspend fun sendFTPriceFeed(
+        encodedPrice: String,
+        pair: String,
+        colorMode: ColorMode?
+    ): Result<Any> {
         val sendSuccess = clockManager.sendFTPriceFeed(encodedPrice, pair)
-            .onSuccess { if (colorMode!=null) clockManager.color(colorMode) }
+            .onSuccess { if (colorMode != null) clockManager.color(colorMode) }
         return sendSuccess
     }
+
     override suspend fun sendNFTPriceFeed(name: String, price: Int, colorMode: ColorMode?) {
         val formattedPrice = formatNFTPrice(price)
         val nameChunks = splitAndFormatName(name)
@@ -347,7 +387,7 @@ class CoreDataRepo(
             clockManager.setOverUnderText(position, over, under)
         }
         clockManager.setOverUnderText(6, formattedPrice, "ADA")
-        if (colorMode!=null) clockManager.color(colorMode)
+        if (colorMode != null) clockManager.color(colorMode)
     }
 
     override suspend fun sendFTPriceAlert(
@@ -358,13 +398,13 @@ class CoreDataRepo(
     ) {
         val priceChunks = splitAndFormatPrices(crossedPrice, reachedPrice)
         clockManager.setOverUnderText(0, name.take(5), "ADA")
-        clockManager.setOverUnderText(1,"","" )
-        clockManager.setOverUnderText(2,"CRO","" )
-        clockManager.setOverUnderText(3,"SSED","NOW" )
+        clockManager.setOverUnderText(1, "", "")
+        clockManager.setOverUnderText(2, "CRO", "")
+        clockManager.setOverUnderText(3, "SSED", "NOW")
         for ((position, over, under) in priceChunks) {
             clockManager.setOverUnderText(position, over, under)
         }
-        clockManager.setOverUnderText(6,"ADA","ADA" )
+        clockManager.setOverUnderText(6, "ADA", "ADA")
     }
 
     override suspend fun sendNFTPriceAlert(
@@ -377,10 +417,10 @@ class CoreDataRepo(
         for ((position, over, under) in nameChunks) {
             clockManager.setOverUnderText(position, over, under)
         }
-        clockManager.setOverUnderText(3,"CRO","" )
-        clockManager.setOverUnderText(4,"SSED","NOW" )
-        clockManager.setOverUnderText(5,crossedPrice,reachedPrice )
-        clockManager.setOverUnderText(6,"ADA","ADA" )
+        clockManager.setOverUnderText(3, "CRO", "")
+        clockManager.setOverUnderText(4, "SSED", "NOW")
+        clockManager.setOverUnderText(5, crossedPrice, reachedPrice)
+        clockManager.setOverUnderText(6, "ADA", "ADA")
 
     }
 
@@ -398,13 +438,18 @@ class CoreDataRepo(
         positionResponse: PositionsResponse
     ) {
         positionsDao.insertOrUpdateFTList(positionResponse.positionsFt.map {
+            // get image from image table
+            val logo = tokenLogoDao.getTokenLogo(it.unit)?.logoBase64
             it.toPositionFT(
-                watchList
+                watchList,
+                logo
             )
         })
         positionsDao.insertOrUpdateNFTList(positionResponse.positionsNft.map {
+            val logo = nftLogoDao.getNFTLogo(it.policy)?.url
             it.toPositionNFT(
-                watchList
+                watchList,
+                logo
             )
         })
         positionsDao.insertOrUpdateLPList(positionResponse.positionsLp.map {
@@ -581,26 +626,90 @@ class CoreDataRepo(
     override suspend fun getAllEnabledFTAlerts(): List<CustomFTAlert> =
         customFTAlertDao.getAllEnabledAlerts()
 
-    override suspend fun getAndStoreRemoteLogo(policy: String) {
+    override suspend fun getAndStoreRemoteLogo(unit: String) {
         // todo load from website
         // val bitmap = get from remote base64,
         // then decodeBase64ToBitmap, store in TokenLogo + put in memórycache
         //memoryCache.put(policy,bitmap)
     }
 
-    override suspend fun getLocalLogo(policy: String): Bitmap? {
-        var resultBitmap = memoryCache.get(policy)
+    override suspend fun getLocalLogo(unit: String): Bitmap? {
+        var resultBitmap = logoCache.get(unit)
         if (resultBitmap == null) {
             resultBitmap =
-                database
-                    .getLogoDao()
-                    .getLogo(policy)
+                tokenLogoDao
+                    .getTokenLogo(unit)
                     ?.logoBase64?.let { it ->
                         decodeBase64ToBitmap(it)
                     }
-            memoryCache.put(policy, resultBitmap)
+            logoCache.put(unit, resultBitmap)
         }
         return resultBitmap
+    }
+
+    private suspend fun checkOrGetRemoteLogoByUnit(unit: String): String?  {
+        // if no logo info is available, get it remote, store it on TokenLogoDao and memory
+        var base64String: String? = null
+        if (tokenLogoDao.getTokenLogo(unit) == null) {
+                tokenLogoManager.getLogoForUnit(unit)
+                    .onSuccess {
+                        base64String = it
+                        if (it.isNotEmpty()) {
+                            tokenLogoDao.insertLogo(
+                                TokenLogo(
+                                    unit = unit,
+                                    logoBase64 = it
+                                )
+                            )
+                            logoCache.put(unit, decodeBase64ToBitmap(it))
+                        }
+                    }
+                    .onFailure {  }
+        } else { base64String = tokenLogoDao.getTokenLogo(unit)!!.logoBase64 }
+        return base64String
+    }
+
+    override suspend fun checkOrGetRemoteLogo(position: PositionFTLocal) {
+        checkOrGetRemoteLogoByUnit(position.unit)?.let {
+            positionsDao.insertOrUpdateFT(
+                position.copy(logo = it)
+            )
+        }
+    }
+
+    override suspend fun checkOrGetRemoteLogo(position: PositionNFTLocal) {
+        if (nftLogoDao.getNFTLogo(position.policy) == null) {
+            if (position.logo != null) {
+                nftLogoDao.insertLogo(
+                    NFTLogo(
+                        policy = position.policy,
+                        url = position.logo!!
+                    )
+                )
+            } else {
+                tapToolsManager.getLogoForPolicy(position.policy)
+                    .onSuccess {
+                        nftLogoDao.insertLogo(
+                            NFTLogo(
+                                policy = position.policy,
+                                url = it.logo
+                            )
+                        )
+                        positionsDao.updateNFT(position.copy(logo = it.logo))
+                    }
+            }
+        } else if (position.logo == null) positionsDao.updateNFT(
+            position.copy(
+                logo = nftLogoDao.getNFTLogo(
+                    position.policy
+                )!!.url
+            )
+        )
+    }
+
+    override suspend fun checkOrGetRemoteLogo(position: PositionLPLocal) {
+        checkOrGetRemoteLogoByUnit(position.tokenA)
+        if (position.tokenBName.isNotEmpty()) checkOrGetRemoteLogoByUnit(position.tokenB)
     }
 
     override suspend fun getAndStorePricesForTokens() {
@@ -667,19 +776,27 @@ class CoreDataRepo(
         ftPriceDao.getLatestPricesForUnit(unit, 2)
 
     override suspend fun loadAndUpdateFeedFTToClockItems() {
-        val validTime = System.currentTimeMillis() - (settingsManager.settings.priceTooOldSeconds * 1000)
-        val previousValidTime = System.currentTimeMillis() - (3 * settingsManager.settings.priceTooOldSeconds * 1000)
+        val validTime =
+            System.currentTimeMillis() - (settingsManager.settings.priceTooOldSeconds * 1000)
+        val previousValidTime =
+            System.currentTimeMillis() - (3 * settingsManager.settings.priceTooOldSeconds * 1000)
         feedFTDao.getAllFeedFTClockEnabled().forEach { item ->
             Timber.tag("wims").i("FeedFTOToClock item $item.name}")
 
-            val latestPrice  = ftPriceDao.getLatestValidPricesForUnit(item.positionUnit, validTime,1)?.getOrNull(0)?.price
+            val latestPrice =
+                ftPriceDao.getLatestValidPricesForUnit(item.positionUnit, validTime, 1)
+                    ?.getOrNull(0)?.price
             Timber.tag("wims").i("          has latetestPrice: $latestPrice")
-            if (latestPrice  != null) {
+            if (latestPrice != null) {
                 var percentageChange: Double? = null
                 if (item.feedClockVolume) {
                     val previousPrice =
                         try {
-                            ftPriceDao.getLatestValidPricesForUnit(item.positionUnit, previousValidTime,10)?.lastOrNull()?.price
+                            ftPriceDao.getLatestValidPricesForUnit(
+                                item.positionUnit,
+                                previousValidTime,
+                                10
+                            )?.lastOrNull()?.price
                         } catch (e: Exception) {
                             null
                         }
@@ -702,14 +819,19 @@ class CoreDataRepo(
                 }
                 val existingFeedTheClockItem = feedTheclockDao.getByUnit(item.positionUnit)
                 if (existingFeedTheClockItem != null) {
-                    feedTheclockDao.update(existingFeedTheClockItem.copy(price = latestPrice, colorMode = colorMode))
+                    feedTheclockDao.update(
+                        existingFeedTheClockItem.copy(
+                            price = latestPrice,
+                            colorMode = colorMode
+                        )
+                    )
                 } else {
                     // add new feedToClockItem
                     feedTheclockDao.insertAtEnd(
                         FeedToClockItem(
                             unit = item.positionUnit,
                             name = item.name,
-                            price = latestPrice ,
+                            price = latestPrice,
                             feedType = FeedType.FeedFT,
                             colorMode = colorMode,
                             orderIndex = 0,
@@ -721,11 +843,15 @@ class CoreDataRepo(
     }
 
     override suspend fun loadAndUpdateFeedNFTToClockItems() {
-        val validTime = System.currentTimeMillis() - (settingsManager.settings.priceTooOldSeconds * 1000)
-        val previousValidTime = System.currentTimeMillis() - (3 * settingsManager.settings.priceTooOldSeconds * 1000)
+        val validTime =
+            System.currentTimeMillis() - (settingsManager.settings.priceTooOldSeconds * 1000)
+        val previousValidTime =
+            System.currentTimeMillis() - (3 * settingsManager.settings.priceTooOldSeconds * 1000)
         feedNFTDao.getAllFeedNFTClockEnabled().forEach { item ->
             Timber.tag("wims").i("FeedNFTToClock item $item}")
-            val latestPrice = nftStatsDao.getLatestValidPricesForPolicy(item.positionPolicy, validTime, 1)?.getOrNull(0)?.price
+            val latestPrice =
+                nftStatsDao.getLatestValidPricesForPolicy(item.positionPolicy, validTime, 1)
+                    ?.getOrNull(0)?.price
             Timber.tag("wims").i("          has latetestPrice: $latestPrice")
 
             if (latestPrice != null) {
@@ -733,7 +859,11 @@ class CoreDataRepo(
                 if (item.feedClockVolume) {
                     val previousPrice =
                         try {
-                            nftStatsDao.getLatestValidPricesForPolicy(item.positionPolicy, previousValidTime,10)?.lastOrNull()?.price
+                            nftStatsDao.getLatestValidPricesForPolicy(
+                                item.positionPolicy,
+                                previousValidTime,
+                                10
+                            )?.lastOrNull()?.price
                         } catch (e: Exception) {
                             null
                         }
@@ -758,7 +888,12 @@ class CoreDataRepo(
 
                 val existingFeedTheClockItem = feedTheclockDao.getByUnit(item.positionPolicy)
                 if (existingFeedTheClockItem != null) {
-                    feedTheclockDao.update(existingFeedTheClockItem.copy(price = latestPrice, colorMode = colorMode))
+                    feedTheclockDao.update(
+                        existingFeedTheClockItem.copy(
+                            price = latestPrice,
+                            colorMode = colorMode
+                        )
+                    )
                 } else {
                     // add new feedToClockItem
                     feedTheclockDao.insertAtEnd(
@@ -870,8 +1005,9 @@ class CoreDataRepo(
     }
 }
 
-fun PositionsFt.toPositionFT(watchList: Int): PositionFTLocal {
+fun PositionsFt.toPositionFT(watchList: Int, logo: String?): PositionFTLocal {
     return PositionFTLocal(
+        logo = logo,
         ticker = this.ticker,
         fingerprint = this.fingerprint,
         adaValue = this.adaValue,
@@ -886,8 +1022,9 @@ fun PositionsFt.toPositionFT(watchList: Int): PositionFTLocal {
     )
 }
 
-fun PositionsNft.toPositionNFT(watchList: Int): PositionNFTLocal {
+fun PositionsNft.toPositionNFT(watchList: Int, logo: String?): PositionNFTLocal {
     return PositionNFTLocal(
+        logo = logo,
         name = this.name,
         policy = this.policy,
         adaValue = this.adaValue,

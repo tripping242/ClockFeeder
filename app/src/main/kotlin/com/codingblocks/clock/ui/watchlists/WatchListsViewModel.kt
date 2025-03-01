@@ -1,5 +1,7 @@
 package com.codingblocks.clock.ui.watchlists
 
+import android.graphics.Bitmap
+import android.util.LruCache
 import androidx.lifecycle.viewModelScope
 import at.florianschuster.control.Controller
 import at.florianschuster.control.createController
@@ -48,6 +50,7 @@ class WatchListViewModel(
         data class FTALertChanged(val unit: String, val watchList: Int) : Action()
         data class NFTALertChanged(val policy: String, val watchList: Int) : Action()
         data class LPALertChanged(val unit: String, val watchList: Int) : Action()
+        data class GetAndUpdateLogos(val watchList: Int) : Action()
     }
 
     sealed class Mutation {
@@ -81,14 +84,19 @@ class WatchListViewModel(
         val errorDuplicateName: Boolean = false,
         val isLoading: Boolean = false,
         val reloadingWatchListNumber: Int = -1,
+        val logoCache: LruCache<String, Bitmap>
     )
 
+    fun getLogoForUnit(unit: String) {
+
+    }
     override val controller: Controller<Action, State> =
         viewModelScope.createController<Action, Mutation, State>(
             initialState = State(
                 // todo get async as in
                 // employee = dataRepo.myProfile.current.getOrNull().asBasicEmployee!!
                 watchlistsWithPositions = dataRepo.watchlistsWithPositions,
+                logoCache = dataRepo.logoCache,
             ),
             mutator = { action ->
                 when (action) {
@@ -162,12 +170,42 @@ class WatchListViewModel(
                                         )
                                     )
                                     emit(Mutation.ShowLoading(false))
+                                    dispatch(Action.GetAndUpdateLogos(watchlistNumber))
                                 }
                             } catch (e: Exception) {
                                 Timber.d("could not retrieve Positions $e")
                                 emit(Mutation.ErrorChanged("Something went wrong adding the new watchlist ${e.message}"))
                             }
                         }
+                    }
+
+                    is Action.GetAndUpdateLogos -> flow {
+                        Timber.tag("wims").i("GetAndUpdateLogos")
+                        try {
+                            val watchlistWithPositions = dataRepo.watchlistsWithPositions.find { it.watchListConfig.watchlistNumber == action.watchList }
+                            watchlistWithPositions?.let { watchList ->
+                                watchList.positionsFT.forEach {
+                                    dataRepo.checkOrGetRemoteLogo(it)
+                                }
+                                watchList.positionsLP.forEach {
+                                    dataRepo.checkOrGetRemoteLogo(it)
+                                }
+                                watchList.positionsNFT.forEach {
+                                    dataRepo.checkOrGetRemoteLogo(it)
+                                }
+                                // get all and set mutation
+                                val updatedWatchlistsWithPositions =
+                                    dataRepo.watchlistsWithPositions
+                                emit(
+                                    Mutation.WatchlistsWithPositionsChanged(
+                                        updatedWatchlistsWithPositions
+                                    )
+                                )
+                            }
+                        } catch (e: Exception) {
+                            Timber.d("could not load logos $e")
+                        }
+
                     }
 
                     is Action.SelectListToShow -> flow {
@@ -201,16 +239,21 @@ class WatchListViewModel(
 
                     is Action.ReloadPositions -> flow {
                         action.walletAdress?.let { walletAddress ->
+                            val watchlist = action.watchListNumber
                             emit(Mutation.ShowReloading(action.watchListNumber))
-                            dataRepo.loadPositionsForAddress(walletAddress).onSuccess {
-                                dataRepo.updateOrInsertPositions(action.watchListNumber, it)
-                                val updatedWatchlistsWithPositions =
-                                    dataRepo.watchlistsWithPositions
-                                emit(
-                                    Mutation.WatchlistsWithPositionsChanged(
-                                        updatedWatchlistsWithPositions
+                            dataRepo.loadPositionsForAddress(walletAddress)
+                                .onSuccess {
+                                    dataRepo.updateOrInsertPositions(action.watchListNumber, it)
+                                    val updatedWatchlistsWithPositions =
+                                        dataRepo.watchlistsWithPositions
+
+                                    emit(
+                                        Mutation.WatchlistsWithPositionsChanged(
+                                            updatedWatchlistsWithPositions
+                                        )
                                     )
-                                )
+                                    // also see if any "new" positions need a logo
+                                    dispatch(Action.GetAndUpdateLogos(watchlist))
                             }.onFailure {
                                 emit(Mutation.ErrorChanged("could not retrieve Positions:\n$it"))
                             }

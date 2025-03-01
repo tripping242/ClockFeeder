@@ -39,6 +39,7 @@ private fun provideAppBuildInfo(context: Context): AppBuildInfo = AppBuildInfo(
     versionName = BuildConfig.VERSION_NAME,
     tapToolsBaseUrl = BuildConfig.TAPTOOLS_BASE_URL,
     blockFrostBaseUrl = BuildConfig.BLOCKFROST_BASE_URL,
+    tokenCardanoBaseUrl = BuildConfig.TOKEN_CARDANO_BASE_URL,
 )
 
 internal val appModules = listOf(appModule, overviewModule, watchListModule, feedsModule, settingsModule)

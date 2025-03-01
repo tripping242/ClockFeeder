@@ -13,9 +13,11 @@ androidx-test-rules = "1.5.0"
 androidx-test-runner = "1.5.2"
 benmanes-versions = "0.50.0"
 coil = "2.5.0"
+coil-compose = "2.4.0"
 collections-immutable = "0.3.6"
 compose-compiler = "1.5.15"
 control-core = "1.2.0"
+glide = "4.16.0"
 google-material = "1.11.0"
 junit = "4.13.2"
 koin = "3.5.0"
@@ -23,11 +25,13 @@ kotlin = "1.9.25"
 kotlinter = "4.1.0"
 kotlinx-coroutines = "1.7.3"
 ksp = "1.9.25-1.0.20"
+landscapist-glide = "2.2.10"
 leakcanary = "2.12"
 littlerobots-version-catalog-updates = "0.8.1"
 mock = "1.13.8"
 okhttp = "4.12.0"
 retrofit = "2.9.0"
+retrofit2-kotlin-coroutines-adapter = "0.9.2"
 retrofit2-kotlinx-serialization-converter = "1.0.0"
 serialization-json = "1.6.2"
 slack-linter = "1.2.0"
@@ -65,13 +69,17 @@ androidx-test-ext-junit = { module = "androidx.test.ext:junit", version.ref = "a
 androidx-test-rules = { module = "androidx.test:rules", version.ref = "androidx-test-rules" }
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidx-test-runner" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
+coil-compose-v240 = { module = "io.coil-kt:coil-compose", version.ref = "coil-compose" }
+converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "retrofit" }
 floschu-control-core = { module = "at.florianschuster.control:control-core", version.ref = "control-core" }
+glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
 google-material-core = { module = "com.google.android.material:material", version.ref = "google-material" }
 jakewharton-timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
 jakewharton-retrofit2-kotlinx-serialization-converter = { module = "com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter", version.ref = "retrofit2-kotlinx-serialization-converter" }
 junit = { module = "junit:junit", version.ref = "junit" }
 koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
 koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose", version.ref = "koin" }
+koin-androidx-workmanager = { module = "io.insert-koin:koin-androidx-workmanager", version.ref = "koin" }
 koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
 koin-test = { module = "io.insert-koin:koin-test", version.ref = "koin" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -79,7 +87,9 @@ kotlinx-collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collec
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization-json" }
+landscapist-glide = { module = "com.github.skydoves:landscapist-glide", version.ref = "landscapist-glide" }
 mock = { module = "io.mockk:mockk", version.ref = "mock" }
+retrofit2-kotlin-coroutines-adapter = { module = "com.jakewharton.retrofit:retrofit2-kotlin-coroutines-adapter", version.ref = "retrofit2-kotlin-coroutines-adapter" }
 slack-lint-compose = { module = "com.slack.lint.compose:compose-lint-checks", version.ref = "slack-linter" }
 square-leakcanary-android = { module = "com.squareup.leakcanary:leakcanary-android", version.ref = "leakcanary" }
 square-leakcanary-objectwatcher = { module = "com.squareup.leakcanary:leakcanary-object-watcher-android", version.ref = "leakcanary" }

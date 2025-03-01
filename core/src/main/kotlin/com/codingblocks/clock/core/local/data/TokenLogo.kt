@@ -3,8 +3,14 @@ package com.codingblocks.clock.core.local.data
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "logos")
+@Entity(tableName = "token_logos")
 data class TokenLogo(
-    @PrimaryKey val policyId: String,
-    val logoBase64: String // Alternative: Use `ByteArray` for Blob storage
+    @PrimaryKey val unit: String,
+    val logoBase64: String
+)
+
+@Entity(tableName = "nft_logos")
+data class NFTLogo(
+    @PrimaryKey val policy: String,
+    val url: String
 )

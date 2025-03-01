@@ -25,4 +25,5 @@ data class AppBuildInfo(
     val versionName: String,
     val tapToolsBaseUrl: String,
     val blockFrostBaseUrl: String,
+    val tokenCardanoBaseUrl: String,
 )

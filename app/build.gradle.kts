@@ -58,12 +58,15 @@ android {
             resValue("string", "leak_canary_display_activity_label", "${Config.appName} Leaks")
             buildConfigField("String", "TAPTOOLS_BASE_URL", "\"https://openapi.taptools.io/api/v1/\"")
             buildConfigField("String", "BLOCKFROST_BASE_URL", "\"https://cardano-mainnet.blockfrost.io/api/v0/\"")
+            buildConfigField("String", "TOKEN_CARDANO_BASE_URL", "\"https://tokens.cardano.org/\"")
+
             dimension = "main"
         }
         create("prod") {
             resValue("string", "app_name", Config.appName)
             buildConfigField("String", "TAPTOOLS_BASE_URL", "\"https://openapi.taptools.io/api/v1/\"")
             buildConfigField("String", "BLOCKFROST_BASE_URL", "\"https://cardano-mainnet.blockfrost.io/api/v0/\"")
+            buildConfigField("String", "TOKEN_CARDANO_BASE_URL", "\"https://tokens.cardano.org/\"")
             dimension = "main"
         }
     }
@@ -137,7 +140,10 @@ android {
 dependencies {
     implementation(project(":core"))
     implementation(project(":base-ui"))
-    implementation("io.insert-koin:koin-androidx-workmanager:3.5.0")
+    implementation(libs.koin.androidx.workmanager)
+    implementation(libs.glide)
+    implementation(libs.landscapist.glide)
+    implementation(libs.coil.compose.v240)
 
     testImplementation(libs.junit)
     testImplementation(libs.koin.test)

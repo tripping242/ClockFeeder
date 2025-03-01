@@ -5,7 +5,6 @@ import com.codingblocks.clock.core.database.BlockFrostDatabase
 import com.codingblocks.clock.core.interceptor.BlockFrostKeyInterceptor
 import com.codingblocks.clock.core.model.blockfrost.AssetAddress
 import com.codingblocks.clock.core.model.blockfrost.BlockFrostConfig
-import com.codingblocks.clock.core.model.blockfrost.LogoConfig
 import com.codingblocks.clock.core.remote.BlockFrostApi
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.coroutines.Dispatchers
@@ -30,46 +29,7 @@ interface BlockFrostManager {
     fun updateApiKey(key: String?)
     suspend fun resolveAdaHandle(handle: String): Result<String>
     suspend fun getAdaHandleAddresses(handle: String): Result<List<AssetAddress>>
-    suspend fun getStakeAddress(address: String) : Result<String>
-}
-
-interface LogoManager {
-    suspend fun getLogoForUnit(unit: String)
-}
-
-class LogoManagerImpl private constructor(
-    private val context: Context,
-    private val config: LogoConfig,
-    private val okHttpClient: OkHttpClient,
-) : LogoManager {
-    class Builder(
-        private val context: Context,
-        private val config: LogoConfig,
-    ) {
-        private var okHttpClient: OkHttpClient = OkHttpClient().newBuilder().build()
-        fun setOkHttpClient(okHttpClient: OkHttpClient): Builder {
-            this.okHttpClient = okHttpClient
-            return this
-        }
-
-        fun build(): LogoManager = LogoManagerImpl(
-            context, config, okHttpClient
-        )
-    }
-
-    private val json by lazy {
-        Json {
-            ignoreUnknownKeys = true
-            explicitNulls = false
-        }
-    }
-
-    //private var api: LogoApi? = provideApi()
-
-    override suspend fun getLogoForUnit(unit: String) {
-        TODO("Not yet implemented")
-    }
-
+    suspend fun getStakeAddress(address: String): Result<String>
 }
 
 class BlockFrostManagerImpl private constructor(
@@ -123,9 +83,10 @@ class BlockFrostManagerImpl private constructor(
             throw BlockFrostError.CouldNotBeResolved
         }
 
-    override suspend fun getAdaHandleAddresses(handle: String): Result<List<AssetAddress>> = safeCall(api) {
-        getAdaHandleAddresses(adaHandlePolicyID + handle.toHex(), 1)
-    }
+    override suspend fun getAdaHandleAddresses(handle: String): Result<List<AssetAddress>> =
+        safeCall(api) {
+            getAdaHandleAddresses(adaHandlePolicyID + handle.toHex(), 1)
+        }
 
     override suspend fun getStakeAddress(address: String): Result<String> = safeCall(api) {
         getStakeAddress(address)
@@ -190,17 +151,25 @@ class BlockFrostManagerImpl private constructor(
         .onFailure { Timber.e(it) }
 }
 
-sealed class BlockFrostError(msg: String? = null, throwable: Throwable? = null) : Throwable(message = msg, cause = throwable) {
+sealed class BlockFrostError(msg: String? = null, throwable: Throwable? = null) :
+    Throwable(message = msg, cause = throwable) {
     data object NoTokenFound : BlockFrostError()
     data object NoUserId : BlockFrostError()
     data object BodyAndErrorNull : BlockFrostError()
-    data object BlockFrostNotOnline : BlockFrostError(msg = "The BlockFrost api seems to be unreachable")
+    data object BlockFrostNotOnline :
+        BlockFrostError(msg = "The BlockFrost api seems to be unreachable")
+
     data object CouldNotBeResolved : BlockFrostError(msg = "The handle could not be resolved")
-    data object CouldNotResolveStakeAddress : BlockFrostError(msg = "The address could not be resolved")
+    data object CouldNotResolveStakeAddress :
+        BlockFrostError(msg = "The address could not be resolved")
+
     data class ErrorBody(val errorBody: ResponseBody) : BlockFrostError(msg = errorBody.string())
-    data class HttpException(val code: Int, override val message: String) : BlockFrostError(msg = "CODE: ${code}\nMESSAGE: $message")
+    data class HttpException(val code: Int, override val message: String) :
+        BlockFrostError(msg = "CODE: ${code}\nMESSAGE: $message")
+
     data class UnkownError(val throwable: Throwable) : BlockFrostError(throwable = throwable)
 }
+
 fun String.toHex(): String {
     return java.lang.String.format("%x", BigInteger(1, this.toByteArray()))
 }

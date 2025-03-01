@@ -21,6 +21,7 @@ import java.util.Locale
     indices = [Index(value = ["watchList"])]
 )
 data class PositionFTLocal(
+    var logo: String? = null,
     var ticker: String,
     var fingerprint: String,
     var adaValue: Double,
@@ -48,6 +49,7 @@ data class PositionFTLocal(
     indices = [Index(value = ["watchList"])]
 )
 data class PositionNFTLocal(
+    var logo: String? = null,
     var name: String,
     @PrimaryKey
     var policy: String,

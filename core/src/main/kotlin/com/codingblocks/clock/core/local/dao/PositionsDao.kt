@@ -33,6 +33,7 @@ interface PositionsDao {
         val id = insertFT(positionFTLocal)
         if (id == -1L) { // Insert failed, so update the existing entry
             updateExistingFT(
+                positionFTLocal.logo,
                 positionFTLocal.unit,
                 positionFTLocal.adaValue,
                 positionFTLocal.price,
@@ -50,8 +51,8 @@ interface PositionsDao {
             insertOrUpdateFT(it) }
     }
 
-    @Query("UPDATE positionFT SET adaValue = :adaValue, price = :price, balance = :balance, change30D = :change30D, lastUpdated = :lastUpdated, showInFeed = :showInFeed WHERE unit = :unit")
-    fun updateExistingFT(unit: String, adaValue: Double, price: Double, balance: Double, change30D: Double, lastUpdated: ZonedDateTime, showInFeed: Boolean)
+    @Query("UPDATE positionFT SET logo = :logo, adaValue = :adaValue, price = :price, balance = :balance, change30D = :change30D, lastUpdated = :lastUpdated, showInFeed = :showInFeed WHERE unit = :unit")
+    fun updateExistingFT(logo: String?, unit: String, adaValue: Double, price: Double, balance: Double, change30D: Double, lastUpdated: ZonedDateTime, showInFeed: Boolean)
 
     // NFT Positions, name is the name, policy is unique
 
@@ -75,6 +76,7 @@ interface PositionsDao {
         val id = insertNFT(positionNFTLocal)
         if (id == -1L) { // Insert failed, so update the existing entry
             updateExistingNFT(
+                positionNFTLocal.logo,
                 positionNFTLocal.policy,
                 positionNFTLocal.adaValue,
                 positionNFTLocal.price,
@@ -90,8 +92,8 @@ interface PositionsDao {
         positions.forEach { insertOrUpdateNFT(it) }
     }
 
-    @Query("UPDATE positionNFT SET adaValue = :adaValue, price = :price, balance = :balance, change30D = :change30D, lastUpdated = :lastUpdated, showInFeed = :showInFeed WHERE policy = :policy")
-    fun updateExistingNFT(policy: String, adaValue: Double, price: Double, balance: Double, change30D: Double, lastUpdated: ZonedDateTime, showInFeed: Boolean)
+    @Query("UPDATE positionNFT SET logo = :logo, adaValue = :adaValue, price = :price, balance = :balance, change30D = :change30D, lastUpdated = :lastUpdated, showInFeed = :showInFeed WHERE policy = :policy")
+    fun updateExistingNFT(logo: String?, policy: String, adaValue: Double, price: Double, balance: Double, change30D: Double, lastUpdated: ZonedDateTime, showInFeed: Boolean)
 
     // LP positions
 
