@@ -31,6 +31,7 @@ data class CustomFTAlert(
     var pushAlert: Boolean,
     var clockAlert: Boolean,
     var mail: Boolean = false,
+    var lastTriggeredTimeStamp: Long? = null,
     var createdAt: ZonedDateTime = ZonedDateTime.now()
 )
 
@@ -59,5 +60,6 @@ data class CustomNFTAlert(
     var pushAlert: Boolean,
     var clockAlert: Boolean,
     var mail: Boolean = false,
+    var lastTriggeredTimeStamp: Long? = null,
     var createdAt: ZonedDateTime = ZonedDateTime.now()
 )

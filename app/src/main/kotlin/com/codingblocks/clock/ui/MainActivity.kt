@@ -42,8 +42,10 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.codingblocks.clock.base.ui.scaffold.AppScaffold
 import com.codingblocks.clock.base.ui.theme.AppTheme
+import com.codingblocks.clock.core.NotificationActions
 import com.codingblocks.clock.navigation.AppNavHost
 import org.koin.core.context.KoinContext
+import timber.log.Timber
 
 class MainActivity : ComponentActivity() {
 
@@ -73,6 +75,11 @@ class MainActivity : ComponentActivity() {
                 windowsInsetsController.isAppearanceLightStatusBars = !darkTheme
                 windowsInsetsController.isAppearanceLightNavigationBars = !darkTheme
             }
+        }
+
+        if (intent?.action == NotificationActions.ACTION_OPEN_FEEDS) {
+            // navigateToFeeds()
+            Timber.tag("wims").i("navigate to feed?")
         }
     }
 }

@@ -68,7 +68,7 @@ class FeedCycler(
         Timber.tag("wims").i("processItem ${item.feedType}")
         return when (item.feedType) {
             FeedType.FeedFT -> {
-                val encodedPrice = "/${formatPrice(item.price!!)}"
+                val encodedPrice = "/${formatPrice(item.price.toString())}"
                 val pair = formatPair(item.name)
                 dataRepo.sendFTPriceFeed(encodedPrice, pair, item.colorMode)
                     .onFailure { throwable ->
@@ -89,11 +89,25 @@ class FeedCycler(
                 Pair(true, 0)
             }
             FeedType.AlertFT -> {
-
-
+                item.price?.let {
+                    dataRepo.sendFTPriceAlert(
+                        item.name,
+                        formatPrice(item.price.toString()),
+                        formatPrice(item.unit),
+                        item.colorMode
+                    )
+                }
                 Pair(true, 0)
             }
             FeedType.AlertNFT -> {
+                item.price?.let {
+                    dataRepo.sendNFTPriceAlert(
+                        item.name,
+                        formatNFTPrice(item.price.roundToInt()),
+                        formatNFTPrice(item.unit.toDouble().roundToInt()),
+                        item.colorMode
+                    )
+                }
                 Pair(true, 0)
             }
 
@@ -105,15 +119,6 @@ class FeedCycler(
 
     private fun formatPair(name: String): String {
         return name.take(5).uppercase() + "/ADA"
-    }
-
-    @SuppressLint("DefaultLocale")
-    fun formatNFTPrice(price: Int): String {
-        return when {
-            price < 100_000 -> price.toString() // Keep as is if ≤ 5 digits
-            price < 1_000_000 -> String.format("%.1fk", price / 1_000.0).take(5) // Shorten to 5 chars max
-            else -> String.format("%.1fm", price / 1_000_000.0).take(5) // Shorten to 5 chars max
-        }
     }
 
     fun splitAndFormatName(name: String): List<Triple<Int, String, String>> {
@@ -171,16 +176,23 @@ fun formatPrice(input: String): String {
             if (number % 1.0 == 0.0) number.toLong().toString() else String.format(Locale.US, "%.1f", number) // Round to whole number
         number % 1.0 == 0.0 -> number.toLong().toString() // Remove .0 for whole numbers
         number >= 1 -> number.toString().take(7) // Keep max possible decimals within 7 positions
-        else -> DecimalFormat("0.######", DecimalFormatSymbols(Locale.US)).format(number).take(7) // Small decimals
+        number >= 0.0001 -> DecimalFormat("0.######", DecimalFormatSymbols(Locale.US)).format(number).take(7) // Small decimals
+        else -> DecimalFormat("0.00E0").format(number).take(8) // Use scientific notation
     }
-    Timber.tag("wims").i("price $price")
-
-    val returnValue = replaceEmptySpace(price)
-    return returnValue
+    return price
 }
 
 @SuppressLint("DefaultLocale")
-fun formatPrice(price: Double): String {
+fun formatNFTPriceFromDouble(price: Double): String {
+    return when {
+        price < 100_000 -> price.toString() // Keep as is if ≤ 5 digits
+        price < 1_000_000 -> String.format("%.1fk", price / 1_000.0).take(5) // Shorten to 5 chars max
+        else -> String.format("%.1fm", price / 1_000_000.0).take(5) // Shorten to 5 chars max
+    }
+}
+
+@SuppressLint("DefaultLocale")
+fun formatPrice5Digits(price: Double): String {
     return when {
         price >= 100_000 -> String.format("%.1fk", price / 1_000).take(5) // 123456 → "123k"
         price >= 1_000 -> String.format("%.0f", price).take(5) // 4521 → "4521"

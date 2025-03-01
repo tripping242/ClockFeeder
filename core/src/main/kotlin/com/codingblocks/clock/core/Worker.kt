@@ -60,21 +60,24 @@ class FTAlertWorker(
                         val previousStat = stats[1]
                         val currentStat = stats[0]
 
+                        Timber.tag("wims").i("previous price ${previousStat.price} treshold ${alert.threshold} current ${currentStat.price}")
                         // Check if the alert condition is met
                         val conditionMet = if (alert.priceOrVolume) {
-                            // Check price crossing
-                            checkPriceCrossing(alert.crossingOver, alert.threshold, previousStat.price, currentStat.price)
+                            checkIfNotAlreadyTriggeredByThesePrices(alert.lastTriggeredTimeStamp, previousStat.timestamp)
+                                    && checkPriceCrossing(alert.crossingOver, alert.threshold, previousStat.price, currentStat.price)
                         } else {
-                            // Check volume change
                             // no volume yet on FTAlert
                             false
                         }
 
-                        // If the condition is met, trigger alerts and handle onlyOnce
                         if (conditionMet) {
+                            Timber.tag("wims").i("all conditions met ! lastTriggeredTimeStamp ${alert.lastTriggeredTimeStamp} << ${previousStat.timestamp} previous price.timestamp -> trigger for ${alert.ticker}!")
                             triggerAlerts(alert, currentStat)
                             if (alert.onlyOnce) {
                                 dataRepo.deleteAlert(alert)
+                            } else {
+                                // update alert with lastAlerted Timestamp
+                                dataRepo.setLastTriggered(alert)
                             }
                         }
                     }
@@ -87,6 +90,10 @@ class FTAlertWorker(
         }
     }
 
+    private fun checkIfNotAlreadyTriggeredByThesePrices(lastTriggeredTimeStamp: Long?, previousPriceTimeStamp: Long): Boolean =
+        if (lastTriggeredTimeStamp == null) true else lastTriggeredTimeStamp < previousPriceTimeStamp
+
+
     private fun checkPriceCrossing(
         crossingOver: Boolean,
         threshold: Double,
@@ -94,24 +101,16 @@ class FTAlertWorker(
         currentPrice: Double
     ): Boolean {
         return if (crossingOver) {
-            // Check if price crossed over the threshold
             previousPrice < threshold && currentPrice >= threshold
         } else {
-            // Check if price crossed under the threshold
             previousPrice > threshold && currentPrice <= threshold
         }
     }
 
     private suspend fun triggerAlerts(alert: CustomFTAlert, currentStat: FTPriceEntity) {
-        val message = if (alert.priceOrVolume) {
-            "Price of ${alert.feedPositionUnit }reached threshold: ${currentStat.price}"
-        } else {
-            ""
-        }
-
-        Timber.tag("wims").i("message trigger alert: $message")
         if (alert.pushAlert) {
-            //dataRepo.pushAlert(alert.ticker, message)
+            Timber.tag("wims").i("push alert now for ${alert.ticker}")
+            dataRepo.pushFTAlert(alert, currentStat.price)
         }
         if (alert.clockAlert) {
             dataRepo.addAlertFTToFeedToClockItems(alert, currentStat.price)
@@ -147,20 +146,22 @@ class NFTAlertWorker(
                         val previousStat = stats[1]
                         val currentStat = stats[0]
 
-                        // Check if the alert condition is met
                         val conditionMet = if (alert.priceOrVolume) {
-                            // Check price crossing
-                            checkPriceCrossing(alert, previousStat, currentStat)
+                            //checkIfNotAlreadyTriggeredByThesePrices(alert.lastTriggeredTimeStamp, previousStat.timestamp)
+                                     checkPriceCrossing(alert, previousStat, currentStat)
                         } else {
-                            // Check volume change
                             checkVolumeChange(alert, previousStat, currentStat)
                         }
+                        Timber.tag("wims").i("previous price ${previousStat.price} treshold ${alert.threshold} current ${currentStat.price}")
 
                         // If the condition is met, trigger alerts and handle onlyOnce
                         if (conditionMet) {
+                            Timber.tag("wims").i("all conditions met ! lastTriggeredTimeStamp ${alert.lastTriggeredTimeStamp} << ${previousStat.timestamp} previous price.timestamp -> trigger for ${alert.ticker}!")
                             triggerAlerts(alert, currentStat)
                             if (alert.onlyOnce) {
                                 dataRepo.deleteAlert(alert)
+                            } else {
+                                dataRepo.setLastTriggered(alert)
                             }
                         }
                     }
@@ -172,6 +173,10 @@ class NFTAlertWorker(
             }
         }
     }
+
+    private fun checkIfNotAlreadyTriggeredByThesePrices(lastTriggeredTimeStamp: Long?, previousPriceTimeStamp: Long): Boolean =
+        if (lastTriggeredTimeStamp == null) true else lastTriggeredTimeStamp < previousPriceTimeStamp
+
 
     private fun checkPriceCrossing(
         alert: CustomNFTAlert,
@@ -203,15 +208,9 @@ class NFTAlertWorker(
     }
 
     private suspend fun triggerAlerts(alert: CustomNFTAlert, currentStat: NFTStatsEntity) {
-        val message = if (alert.priceOrVolume) {
-            "Price reached threshold: ${currentStat.price}"
-        } else {
-            "Volume change exceeded threshold: ${currentStat.volume}"
-        }
-
-        Timber.tag("wims").i("message: $message")
         if (alert.pushAlert) {
-            //dataRepo.pushAlert(alert.ticker, message)
+            Timber.tag("wims").i("push alert now for ${alert.ticker}")
+            dataRepo.pushNFTAlert(alert, currentStat.price)
         }
         if (alert.clockAlert) {
             dataRepo.addAlertNFTToFeedToClockItems(alert, currentStat.price)

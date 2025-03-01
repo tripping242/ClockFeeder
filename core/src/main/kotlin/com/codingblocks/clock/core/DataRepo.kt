@@ -89,8 +89,8 @@ interface DataRepo {
     suspend fun getClockStatus(): Result<StatusResponse>
     suspend fun sendFTPriceFeed(encodedPrice: String, pair: String, colorMode: ColorMode?): Result<Any>
     suspend fun sendNFTPriceFeed(name: String, price: Int, colorMode: ColorMode?)
-    /*suspend fun sendFTPriceAlert()
-    suspend fun sendNFTPriceAlert()*/
+    suspend fun sendFTPriceAlert(name: String, reachedPrice: String, crossedPrice: String, colorMode: ColorMode?)
+    suspend fun sendNFTPriceAlert(name: String, reachedPrice: String, crossedPrice: String, colorMode: ColorMode?)
 
     // wallet with address
     suspend fun resolveAdaHandle(handle: String): Result<String>
@@ -144,6 +144,8 @@ interface DataRepo {
     // alerts
     suspend fun deleteAlert(alert: CustomFTAlert)
     suspend fun deleteAlert(alert: CustomNFTAlert)
+    suspend fun setLastTriggered(alert: CustomFTAlert)
+    suspend fun setLastTriggered(alert: CustomNFTAlert)
 
     suspend fun addAlertForUnit(alert: CustomFTAlert)
     suspend fun addAlertForPolicy(alert: CustomNFTAlert)
@@ -169,6 +171,8 @@ interface DataRepo {
     suspend fun loadAndUpdateFeedNFTToClockItems()
     suspend fun addAlertFTToFeedToClockItems(alert: CustomFTAlert, reachedPrice: Double)
     suspend fun addAlertNFTToFeedToClockItems(alert: CustomNFTAlert, reachedPrice: Double)
+    suspend fun pushFTAlert(alert: CustomFTAlert, reachedPrice: Double)
+    suspend fun pushNFTAlert(alert: CustomNFTAlert, reachedPrice: Double)
 
     fun getAllFeedToClockItems() : List<FeedToClockItem>
     fun deleteFeedToClockItem(item : FeedToClockItem)
@@ -183,6 +187,7 @@ class CoreDataRepo(
     private val okHttpClient: OkHttpClient,
     private val appBuildInfo: AppBuildInfo,
     private val workManager: WorkManager,
+    private val notificationHelper: NotificationHelper,
 ) : DataRepo {
     private val tapToolsManager: TapToolsManager = provideTapToolsManager()
     private val clockManager: ClockManager = provideClockManager()
@@ -343,6 +348,40 @@ class CoreDataRepo(
         }
         clockManager.setOverUnderText(6, formattedPrice, "ADA")
         if (colorMode!=null) clockManager.color(colorMode)
+    }
+
+    override suspend fun sendFTPriceAlert(
+        name: String,
+        reachedPrice: String,
+        crossedPrice: String,
+        colorMode: ColorMode?
+    ) {
+        val priceChunks = splitAndFormatPrices(crossedPrice, reachedPrice)
+        clockManager.setOverUnderText(0, name.take(5), "ADA")
+        clockManager.setOverUnderText(1,"","" )
+        clockManager.setOverUnderText(2,"CRO","" )
+        clockManager.setOverUnderText(3,"SSED","NOW" )
+        for ((position, over, under) in priceChunks) {
+            clockManager.setOverUnderText(position, over, under)
+        }
+        clockManager.setOverUnderText(6,"ADA","ADA" )
+    }
+
+    override suspend fun sendNFTPriceAlert(
+        name: String,
+        reachedPrice: String,
+        crossedPrice: String,
+        colorMode: ColorMode?
+    ) {
+        val nameChunks = splitAndFormatNameAlertFirst3Positions(name)
+        for ((position, over, under) in nameChunks) {
+            clockManager.setOverUnderText(position, over, under)
+        }
+        clockManager.setOverUnderText(3,"CRO","" )
+        clockManager.setOverUnderText(4,"SSED","NOW" )
+        clockManager.setOverUnderText(5,crossedPrice,reachedPrice )
+        clockManager.setOverUnderText(6,"ADA","ADA" )
+
     }
 
     override suspend fun resolveAdaHandle(handle: String): Result<String> =
@@ -509,6 +548,14 @@ class CoreDataRepo(
 
     override suspend fun deleteAlert(alert: CustomNFTAlert) {
         customNFTAlertDao.delete(alert)
+    }
+
+    override suspend fun setLastTriggered(alert: CustomFTAlert) {
+        customFTAlertDao.update(alert.copy(lastTriggeredTimeStamp = System.currentTimeMillis()))
+    }
+
+    override suspend fun setLastTriggered(alert: CustomNFTAlert) {
+        customNFTAlertDao.update(alert.copy(lastTriggeredTimeStamp = System.currentTimeMillis()))
     }
 
     override suspend fun addAlertForUnit(alert: CustomFTAlert) {
@@ -730,9 +777,9 @@ class CoreDataRepo(
     }
 
     override suspend fun addAlertFTToFeedToClockItems(alert: CustomFTAlert, reachedPrice: Double) {
-        Timber.tag("wims").i("ALERT being added to front of the Clock feed")
+        Timber.tag("wims").i("ALERT being added to front of the Clock feed $alert")
         val feedToClockItem = FeedToClockItem(
-            unit = "alert",
+            unit = alert.threshold.toString(),
             name = alert.ticker,
             price = reachedPrice,
             feedType = FeedType.AlertFT,
@@ -747,8 +794,9 @@ class CoreDataRepo(
         alert: CustomNFTAlert,
         reachedPrice: Double
     ) {
+        Timber.tag("wims").i("ALERT NFT being added to front of the Clock feed $alert")
         val feedToClockItem = FeedToClockItem(
-            unit = "alert",
+            unit = alert.threshold.toString(),
             name = alert.ticker,
             price = reachedPrice,
             feedType = FeedType.AlertNFT,
@@ -757,6 +805,20 @@ class CoreDataRepo(
             orderIndex = 0,
         )
         feedTheclockDao.insertAtFront(feedToClockItem)
+    }
+
+    override suspend fun pushFTAlert(alert: CustomFTAlert, reachedPrice: Double) {
+        notificationHelper.sendNotification(
+            title = "Token price alert!",
+            message = "The price of ${alert.ticker} has crossed ${reachedPrice} ₳",
+        )
+    }
+
+    override suspend fun pushNFTAlert(alert: CustomNFTAlert, reachedPrice: Double) {
+        notificationHelper.sendNotification(
+            title = "NFT Price alert!",
+            message = "The floor price of ${alert.ticker} has crossed ${reachedPrice} ₳",
+        )
     }
 
     override fun getAllFeedToClockItems(): List<FeedToClockItem> =

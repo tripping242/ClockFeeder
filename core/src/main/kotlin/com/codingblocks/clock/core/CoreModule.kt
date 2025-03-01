@@ -28,12 +28,17 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.workmanager.dsl.workerOf
 import org.koin.dsl.module
 
+object NotificationActions {
+    const val ACTION_OPEN_FEEDS = "com.codingblocks.clock.core.OPEN_FEEDS"
+}
+
 internal val coreModule = module {
 
     factory { HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY } }
 
     single { provideOkHttpClient(loggingInterceptor = get(), appBuildInfo = get()) }
 
+    single { NotificationHelper(context = get()) }
     single {
         Room.databaseBuilder(
             context = get(),
@@ -54,6 +59,7 @@ internal val coreModule = module {
             okHttpClient = get(),
             appBuildInfo = get(),
             workManager = get(),
+            notificationHelper = get(),
         )
     }
 
