@@ -816,13 +816,12 @@ fun PositionFTItem(
             .padding(4.dp)
             .fillMaxWidth(),
     ) {
-        item.logo?.let {
-            LogoImage(
-                item.unit,
-                it,
-                logoCache
-            )
-        }
+        LogoImage(
+            item.unit,
+            item.logo,
+            logoCache
+        )
+
         Text(
             text = item.ticker,
             modifier = Modifier
@@ -846,7 +845,7 @@ fun PositionFTItem(
                 .padding(end = 16.dp)
         )
 
-        Text(text = item.lastUpdated.formattedHHMM())
+        //Text(text = item.lastUpdated.formattedHHMM())
 
         IconButton(
             onClick = onAlertClicked,
@@ -872,7 +871,7 @@ fun LoadIPFSImage(ipfsUrl: String) {
 @Composable
 fun LogoImage(
     unit: String,
-    base64String: String,
+    base64String: String?,
     logoCache: LruCache<String, Bitmap>
 ) {
     // State to hold the bitmap
@@ -884,12 +883,15 @@ fun LogoImage(
         bitmapState.value = cachedBitmap
     } else {
         LaunchedEffect(unit) {
-            val bitmap = decodeBase64ToBitmap(base64String)
-            if (bitmap != null) {
-                /*// Store in cache
-                logoCache.put(unit, bitmap)*/
-                // Update state
-                bitmapState.value = bitmap
+            base64String?.let {
+                val bitmap = decodeBase64ToBitmap(base64String)
+                if (bitmap != null) {
+                    //Store in cache
+                    Timber.tag("wims").i("try store in cache !!!!!!!!!!")
+                    logoCache.put(unit, bitmap)
+                    // Update state
+                    bitmapState.value = bitmap
+                }
             }
         }
     }
