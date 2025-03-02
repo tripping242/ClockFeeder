@@ -1,22 +1,16 @@
 package com.codingblocks.clock.base.ui.dialog
 
-import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.codingblocks.clock.base.ui.theme.AppTheme
 
 @Composable
 fun FullScreenDialog(
@@ -36,7 +30,14 @@ fun FullScreenDialog(
                 dismissOnClickOutside = false,
             )
         ) {
-            dialogContent.invoke(this)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = AppTheme.shapes.large,
+                color = AppTheme.colors.surface,
+                elevation = 24.dp
+            ) {
+                dialogContent.invoke(this)
+            }
         }
     }
 }
@@ -53,15 +54,20 @@ fun FullWidthDialog(
     ) {
         Dialog(
             onDismissRequest = onDismissRequest,
-            // only allow dismissRequests, to be handled in calling function (are you sure)...
-            // dont close dialog on back press, as we cant show "are you sure"
             DialogProperties(
                 usePlatformDefaultWidth = false,
                 dismissOnBackPress = false,
                 dismissOnClickOutside = false,
             )
         ) {
-            dialogContent.invoke(this)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = AppTheme.shapes.large,
+                color = AppTheme.colors.surface,
+                elevation = 24.dp
+            ) {
+                dialogContent.invoke(this)
+            }
         }
     }
 }

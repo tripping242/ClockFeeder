@@ -1,5 +1,7 @@
 package com.codingblocks.clock.ui.feeds
 
+import android.graphics.Bitmap
+import android.util.LruCache
 import androidx.lifecycle.viewModelScope
 import at.florianschuster.control.Controller
 import at.florianschuster.control.createController
@@ -68,11 +70,14 @@ class FeedsViewModel(
         val positions: PositionsResponse? = null,
         val showAddAlertDialog: Boolean = false,
         val error: String? = null,
+        val logoCache: LruCache<String, Bitmap>
     )
 
     override val controller: Controller<Action, State> =
         viewModelScope.createController<Action, Mutation, State>(
-            initialState = State(),
+            initialState = State(
+                logoCache = dataRepo.logoCache,
+            ),
             mutator = { action ->
                 when (action) {
                     Action.Initialize -> flow {

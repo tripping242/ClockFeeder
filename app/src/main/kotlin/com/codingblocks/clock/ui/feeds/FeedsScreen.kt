@@ -1,8 +1,10 @@
 package com.codingblocks.clock.ui.feeds
 
-import androidx.compose.foundation.background
+import android.graphics.Bitmap
+import android.util.LruCache
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,6 +19,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
 import androidx.compose.material.IconButton
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
@@ -27,9 +31,12 @@ import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.ArrowDropUp
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.LooksOne
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.NotificationsOff
+import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.WaterfallChart
+import androidx.compose.material.primarySurface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -39,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -62,6 +70,7 @@ import com.codingblocks.clock.core.local.data.FeedFTWithAlerts
 import com.codingblocks.clock.core.local.data.FeedNFTWithAlerts
 import com.codingblocks.clock.core.local.data.formattedHHMM
 import com.codingblocks.clock.ui.feeds.FeedsViewModel.ShowType
+import com.codingblocks.clock.ui.watchlists.LogoImage
 import kotlinx.collections.immutable.toImmutableList
 import org.koin.androidx.compose.getViewModel
 
@@ -74,6 +83,9 @@ fun FeedsScreen(
     val childLazyListState = rememberLazyListState()
     var expandedItemIndex by remember { mutableStateOf(-1) }
     var showType by remember { mutableStateOf(FeedsViewModel.ShowType.FT) }
+    val optionsShowTypeValue = remember {
+        FeedsViewModel.ShowType.entries.map { it.name }
+    }.toImmutableList()
 
     LaunchedEffect(expandedItemIndex) {
         if (expandedItemIndex != -1) parentLazyListState.animateScrollToItem(expandedItemIndex) // Smooth scroll to the item
@@ -92,10 +104,20 @@ fun FeedsScreen(
         ) {
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Button(
+                SingleChoiceSegmentedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    options = optionsShowTypeValue,
+                    selected = optionsShowTypeValue.indexOf(showType.name),
+                    onSelected = { index ->
+                        showType = if (optionsShowTypeValue[index] == ShowType.FT.name) ShowType.FT else ShowType.NFT
+                    }
+                )
+                /*Button(
                     modifier = Modifier,
                     onClick = {
                         showType =
@@ -112,7 +134,7 @@ fun FeedsScreen(
 
                     ) {
                     Text(text = "NTF")
-                }
+                }*/
             }
 
             if (showType == ShowType.FT) {
@@ -157,6 +179,7 @@ fun FeedsScreen(
                                     FeedsViewModel.Action.DeleteFTAlert(it)
                                 )
                             },
+                            logoCache = state.logoCache,
                             state = childLazyListState,
                         )
                     }
@@ -270,7 +293,6 @@ fun FeedNFTItem(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color.White)
                         .padding(16.dp),
                     horizontalAlignment = Alignment.Start,
                     verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -376,21 +398,13 @@ fun FeedNFTItem(
                         .fillMaxWidth(),
                 ) {
                     Text(
-                        // and maybe icon link
                         text = item.feedNFT.name,
                         modifier = Modifier
-                            .width(100.dp)
                             .padding(end = 8.dp),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
 
-                    Text(
-                        text = item.feedNFT.lastUpdatedAt.formattedHHMM(),
-                        modifier = Modifier
-                            .width(80.dp)
-                            .padding(end = 8.dp)
-                    )
                     IconButton(
                         onClick = { showDeleteDialog = true },
                         modifier = Modifier,
@@ -403,7 +417,7 @@ fun FeedNFTItem(
                     modifier = Modifier
                         .padding(4.dp)
                         .wrapContentHeight(),
-                    text = "Show price feed on BlockClock",
+                    text = "Show floor price feed on BlockClock",
                     onCheckedChanged = { onFeedClockPriceChanged.invoke() },
                     checkedState = item.feedNFT.feedClockPrice,
                 )
@@ -425,7 +439,9 @@ fun FeedNFTItem(
                 ) {
                     IconButton(
                         onClick = {
-                            showAddDialog = true }
+                            showAddDialog = true },
+                        modifier = Modifier
+                            .padding(start = 4.dp)
                     ) {
                         AppIcon(icon = Icons.Outlined.AddAlarm)
                     }
@@ -443,16 +459,25 @@ fun FeedNFTItem(
             val alerts = item.alerts.sortedByDescending { it.threshold }
             LazyColumn(
                 state = state,
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 600.dp),
             ) {
                 items(alerts)
                 { alert ->
-                    NFTAlertItem(
-                        item = alert,
-                        onDeleteClicked = { onDeleteAlertClicked(alert) },
-                    )
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = AppTheme.shapes.small,
+                        elevation = 16.dp,
+                        color = MaterialTheme.colors.primarySurface
+                    ) {
+                        NFTAlertItem(
+                            item = alert,
+                            onDeleteClicked = { onDeleteAlertClicked(alert) },
+                        )
+                    }
                 }
             }
         },
@@ -467,6 +492,7 @@ fun FeedFTItem(
     onFeedClockVolumeChanged: () -> Unit,
     onAddAlertClicked: (CustomFTAlert) -> Unit,
     onDeleteAlertClicked: (CustomFTAlert) -> Unit,
+    logoCache: LruCache<String, Bitmap>,
     state: LazyListState,
 ) {
     var isExpanded by remember { mutableStateOf(false) }
@@ -506,7 +532,7 @@ fun FeedFTItem(
     if (showAddDialog) {
         var selectedTypeSet: Set<Int> by remember { mutableStateOf(emptySet()) }
         var selectedTriggerIndex by remember { mutableStateOf(-1) }
-        var selectedValueIndex  by remember { mutableStateOf(-1) }
+        var selectedValueIndex  by remember { mutableStateOf(0) }
         var amount: Double? by remember { mutableStateOf(null) }
         var volume: Int? by remember { mutableStateOf(null) }
 
@@ -516,23 +542,14 @@ fun FeedFTItem(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color.White)
                         .padding(16.dp),
                     horizontalAlignment = Alignment.Start,
                     verticalArrangement = Arrangement.spacedBy(16.dp),
 
                     ) {
                     Text(
-                        text = "Add new alert for ${item.feedFT.name}:",
+                        text = "Add new price alert for ${item.feedFT.name}:",
                         style = AppTheme.typography.h4,
-                    )
-                    SingleChoiceSegmentedButton(
-                        modifier = Modifier.fillMaxWidth(),
-                        options = optionsAlertValue,
-                        selected = null,
-                        onSelected = { index ->
-                            selectedValueIndex = index
-                        }
                     )
                     SingleChoiceSegmentedButton(
                         modifier = Modifier.fillMaxWidth(),
@@ -550,26 +567,16 @@ fun FeedFTItem(
                             selectedTypeSet = newSelection
                         }
                     )
-                    if (selectedValueIndex == 0) {
-                        TextRowWithDoubleInputTextField(
-                            text = "Trigger when price reaches:",
-                            amount = amount,
-                            onAmountChanged = { newAmount ->
-                                amount = newAmount
-                            },
-                            hint = "₳",
-                        )
-                    }
-                    if (selectedValueIndex == 1) {
-                        TextRowWithIntegerInputTextField(
-                            text = "Trigger when volume reaches:",
-                            amount = volume ?: 0,
-                            onAmountChanged = { newAmount ->
-                                volume = newAmount
-                            },
-                            hint = "₳",
-                        )
-                    }
+
+                    TextRowWithDoubleInputTextField(
+                        text = "Trigger when price reaches:",
+                        amount = amount,
+                        onAmountChanged = { newAmount ->
+                            amount = newAmount
+                        },
+                        hint = "₳",
+                    )
+
                     Button(
                         modifier = Modifier.fillMaxWidth(),
                         enabled = selectedTriggerIndex != -1 && selectedValueIndex != -1 && selectedTypeSet.isNotEmpty() && amount != null,
@@ -616,7 +623,7 @@ fun FeedFTItem(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier
-                        .padding(4.dp)
+                        .padding(16.dp)
                         .wrapContentHeight()
                         .fillMaxWidth(),
                 ) {
@@ -629,12 +636,6 @@ fun FeedFTItem(
                         overflow = TextOverflow.Ellipsis
                     )
 
-                    Text(
-                        text = item.feedFT.lastUpdatedAt.formattedHHMM(),
-                        modifier = Modifier
-                            .width(80.dp)
-                            .padding(end = 8.dp)
-                    )
                     IconButton(
                         onClick = { showDeleteDialog = true },
                         modifier = Modifier,
@@ -668,7 +669,9 @@ fun FeedFTItem(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     IconButton(
-                        onClick = { showAddDialog = true }
+                        onClick = { showAddDialog = true },
+                        modifier = Modifier
+                            .padding(4.dp)
                     ) {
                         AppIcon(icon = Icons.Outlined.AddAlarm)
                     }
@@ -686,16 +689,25 @@ fun FeedFTItem(
             val alerts = item.alerts.sortedByDescending { it.threshold }
             LazyColumn(
                 state = state,
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 600.dp),
             ) {
                 items(alerts)
                 { alert ->
-                    FTAlertItem(
-                        item = alert,
-                        onDeleteClicked = { onDeleteAlertClicked(alert) },
-                    )
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = AppTheme.shapes.small,
+                        elevation = 16.dp,
+                        color = MaterialTheme.colors.primarySurface
+                    ) {
+                        FTAlertItem(
+                            item = alert,
+                            onDeleteClicked = { onDeleteAlertClicked(alert) },
+                        )
+                    }
                 }
             }
         },
@@ -711,17 +723,9 @@ fun NFTAlertItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier
-            .padding(4.dp)
+            .padding(horizontal = 16.dp, vertical = 4.dp)
             .fillMaxWidth(),
     ) {
-        Text(
-            text = item.ticker,
-            modifier = Modifier
-                .width(100.dp)
-                .padding(end = 16.dp),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
 
         if (item.priceOrVolume) {
             AppIcon(icon = Icons.Outlined.WaterfallChart)
@@ -729,7 +733,7 @@ fun NFTAlertItem(
                 text = item.threshold.formatMax8decimals()  + " ₳",
                 modifier = Modifier
                     .width(100.dp)
-                    .padding(end = 16.dp)
+                    .padding(start = 8.dp, end = 16.dp)
             )
         } else {
             AppIcon(icon = Icons.Outlined.BarChart)
@@ -737,9 +741,10 @@ fun NFTAlertItem(
                 text = item.threshold.formatToNoDecimals() + " ₳",
                 modifier = Modifier
                     .width(100.dp)
-                    .padding(end = 16.dp)
+                    .padding(start = 8.dp, end = 16.dp)
             )
         }
+        AppIcon(icon = if (item.onlyOnce) Icons.Outlined.LooksOne else Icons.Outlined.Repeat)
         AppIcon(icon = if (item.pushAlert) Icons.Outlined.NotificationsActive else Icons.Outlined.NotificationsOff)
         AppIcon(icon = if (item.clockAlert) Icons.Outlined.Alarm else Icons.Outlined.AlarmOff)
 
@@ -762,25 +767,16 @@ fun FTAlertItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier
-            .padding(4.dp)
+            .padding(horizontal = 16.dp, vertical = 4.dp)
             .fillMaxWidth(),
     ) {
-        Text(
-            text = item.ticker,
-            modifier = Modifier
-                .width(80.dp)
-                .padding(end = 16.dp),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-
         if (item.priceOrVolume) {
             AppIcon(icon = Icons.Outlined.WaterfallChart)
             Text(
                 text = item.threshold.formatMax8decimals() + " ₳",
                 modifier = Modifier
-                    .width(80.dp)
-                    .padding(end = 8.dp)
+                    .width(100.dp)
+                    .padding(start = 8.dp, end = 8.dp)
             )
         } else {
             AppIcon(icon = Icons.Outlined.BarChart)
@@ -788,9 +784,10 @@ fun FTAlertItem(
                 text = item.threshold.formatToNoDecimals()  + " ₳",
                 modifier = Modifier
                     .width(100.dp)
-                    .padding(end = 8.dp)
+                    .padding(start = 8.dp, end = 8.dp)
             )
         }
+        AppIcon(icon = if (item.onlyOnce) Icons.Outlined.LooksOne else Icons.Outlined.Repeat)
         AppIcon(icon = if (item.pushAlert) Icons.Outlined.NotificationsActive else Icons.Outlined.NotificationsOff)
         AppIcon(icon = if (item.clockAlert) Icons.Outlined.Alarm else Icons.Outlined.AlarmOff)
 

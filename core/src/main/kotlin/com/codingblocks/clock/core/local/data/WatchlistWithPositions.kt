@@ -30,7 +30,7 @@ data class WatchlistWithPositions(
             watchListConfig.watchlistNumber,
             positionsLP,
             positionsFT,
-        )
+        ).filter { it.ticker != "ADA" }
 
 }
 

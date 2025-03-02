@@ -6,6 +6,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -25,15 +27,19 @@ import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.IconButton
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.TextField
+import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AddAlert
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.primarySurface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,8 +51,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -77,6 +86,7 @@ import com.codingblocks.clock.core.local.data.formattedHHMM
 import com.codingblocks.clock.ui.utils.loadBase64WithGlide
 import com.codingblocks.clock.ui.watchlists.WatchListViewModel.PositionItem
 import com.codingblocks.clock.ui.watchlists.WatchListViewModel.ShowType
+import com.skydoves.landscapist.ImageOptions
 import com.skydoves.landscapist.glide.GlideImage
 import org.koin.androidx.compose.getViewModel
 import timber.log.Timber
@@ -296,7 +306,7 @@ fun ExpandableItem(
                     ) {
                         Text(
                             modifier = Modifier
-                                .padding(bottom = 16.dp),
+                                .padding(start = 8.dp, top = 8.dp, bottom = 16.dp),
                             text = config.name,
                             maxLines = 3,
                             overflow = TextOverflow.Ellipsis,
@@ -346,7 +356,7 @@ fun ExpandableItem(
         expandedContent = {
             Column(
                 modifier = Modifier
-                    .padding(16.dp)
+                    .padding(8.dp)
                     .fillMaxWidth(),
             ) {
                 Row(
@@ -383,31 +393,48 @@ fun ExpandableItem(
                         }
                     }
                 }
-
-                //Box(modifier = Modifier) {
-                    LazyColumn(
-                        state = state,
-                        modifier = Modifier
-                            .heightIn(max = 600.dp)
-                            .padding(vertical = 4.dp),
-                    ) {
-                        val items = getPositionItems(showType, currentWatchListWithPositions)
-                        items(items, key = { it.hashCode() }) { positionItem ->
+                LazyColumn(
+                    state = state,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier
+                        .heightIn(max = 600.dp)
+                        .padding(vertical = 4.dp),
+                ) {
+                    val items = getPositionItems(showType, currentWatchListWithPositions)
+                    items(items, key = { it.hashCode() }) { positionItem ->
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = AppTheme.shapes.small,
+                            elevation = 8.dp,
+                            color = MaterialTheme.colors.background
+                        ) {
                             when (positionItem) {
                                 is PositionItem.FT -> PositionFTItem(
                                     item = positionItem.positionFT,
                                     logoCache = logoCache,
-                                    onAlertClicked = { onFTAlertClicked(positionItem.positionFT.unit, currentWatchListWithPositions.watchListConfig.watchlistNumber) }
+                                    onAlertClicked = {
+                                        onFTAlertClicked(
+                                            positionItem.positionFT.unit,
+                                            currentWatchListWithPositions.watchListConfig.watchlistNumber
+                                        )
+                                    }
                                 )
+
                                 is PositionItem.NFT -> PositionNFTItem(
                                     item = positionItem.positionNFT,
-                                    onAlertClicked = { onNFTAlertClicked(positionItem.positionNFT.policy, currentWatchListWithPositions.watchListConfig.watchlistNumber) }
+                                    onAlertClicked = {
+                                        onNFTAlertClicked(
+                                            positionItem.positionNFT.policy,
+                                            currentWatchListWithPositions.watchListConfig.watchlistNumber
+                                        )
+                                    }
                                 )
+
                                 is PositionItem.LP -> PositionLPItem(item = positionItem.positionLP)
                             }
                         }
                     }
-                //}
+                }
             }
         })
 }
@@ -462,11 +489,15 @@ fun AddWatchListDialog(
     var minFTPostionAmount: Int by remember { mutableIntStateOf(0) }
     var minNFTPostionAmount: Int by remember { mutableIntStateOf(0) }
     val scrollState = rememberScrollState()
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(AppTheme.colors.surface)
             .verticalScroll(scrollState)
             .padding(16.dp),
         horizontalAlignment = Alignment.Start,
@@ -492,6 +523,7 @@ fun AddWatchListDialog(
                 modifier = Modifier
                     .padding(end = 16.dp)
                     .weight(0.3f)
+                    .focusRequester(focusRequester)
             )
             Button(
                 enabled = address.isNotEmpty() && address.length > 2,
@@ -627,95 +659,101 @@ fun SettingsDialog(
     Dialog(
         onDismissRequest = onDismiss,
     ) {
-        Column(
-            modifier = modifier
-                .background(Color.White)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.Start,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+        Surface(
+            modifier = modifier.fillMaxWidth(),
+            shape = AppTheme.shapes.large,
+            color = AppTheme.colors.surface,
+            elevation = 24.dp
+        ) {
+            Column(
+                modifier = modifier
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.Start,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
 
-            ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = "Watchlist name:",
-                    style = AppTheme.typography.h6,
-                )
-                Text(
-                    text = watchListConfig.name,
-                    style = AppTheme.typography.h6,
-                    maxLines = 2,
-                )
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                watchListConfig.walletAddress?.let {
+                ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
                     Text(
-                        text = it,
-                        style = TextStyle(fontSize = 8.sp),
-                        color = md_theme_light_secondary,
+                        text = "Watchlist name:",
+                        style = AppTheme.typography.h6,
+                    )
+                    Text(
+                        text = watchListConfig.name,
+                        style = AppTheme.typography.h6,
+                        maxLines = 2,
                     )
                 }
-            }
-            CheckBoxRowWithText(
-                text = "Include LP in Token positions?",
-                onCheckedChanged = { checkedStateIncludeLPInFT = it },
-                checkedState = checkedStateIncludeLPInFT,
-            )
-            CheckBoxRowWithText(
-                text = "Include NFTs in this watchlist?",
-                onCheckedChanged = { checkedStateIncludeNFT = it },
-                checkedState = checkedStateIncludeNFT,
-            )
-            TextRowWithIntegerInputTextField(
-                text = "Exclude token positions with a value lower than:",
-                amount = minFTPostionAmount,
-                onAmountChanged = { newAmount ->
-                    minFTPostionAmount = newAmount
-                },
-                hint = "₳",
-            )
-            if (checkedStateIncludeNFT) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    watchListConfig.walletAddress?.let {
+                        Text(
+                            text = it,
+                            style = TextStyle(fontSize = 8.sp),
+                            color = md_theme_light_secondary,
+                        )
+                    }
+                }
+                CheckBoxRowWithText(
+                    text = "Include LP in Token positions?",
+                    onCheckedChanged = { checkedStateIncludeLPInFT = it },
+                    checkedState = checkedStateIncludeLPInFT,
+                )
+                CheckBoxRowWithText(
+                    text = "Include NFTs in this watchlist?",
+                    onCheckedChanged = { checkedStateIncludeNFT = it },
+                    checkedState = checkedStateIncludeNFT,
+                )
                 TextRowWithIntegerInputTextField(
-                    text = "Exclude NFT positions with a value lower than:",
-                    amount = minNFTPostionAmount,
+                    text = "Exclude token positions with a value lower than:",
+                    amount = minFTPostionAmount,
                     onAmountChanged = { newAmount ->
-                        minNFTPostionAmount = newAmount
+                        minFTPostionAmount = newAmount
                     },
                     hint = "₳",
                 )
-            }
-            Button(
-                modifier = Modifier.fillMaxWidth(),
-                enabled = with (watchListConfig) {
-                        (includeNFT != checkedStateIncludeNFT ||
-                        includeLPinFT != checkedStateIncludeLPInFT ||
-                        minNFTAmount != minNFTPostionAmount ||
-                        minFTAmount != minFTPostionAmount)
-                },
-                onClick = {
-                    val config: WatchListConfig = watchListConfig.copy(
-                        includeNFT = checkedStateIncludeNFT,
-                        includeLPinFT = checkedStateIncludeLPInFT,
-                        minNFTAmount = minNFTPostionAmount,
-                        minFTAmount = minFTPostionAmount,
+                if (checkedStateIncludeNFT) {
+                    TextRowWithIntegerInputTextField(
+                        text = "Exclude NFT positions with a value lower than:",
+                        amount = minNFTPostionAmount,
+                        onAmountChanged = { newAmount ->
+                            minNFTPostionAmount = newAmount
+                        },
+                        hint = "₳",
                     )
-                    onSaveClick(config)
+                }
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = with(watchListConfig) {
+                        (includeNFT != checkedStateIncludeNFT ||
+                                includeLPinFT != checkedStateIncludeLPInFT ||
+                                minNFTAmount != minNFTPostionAmount ||
+                                minFTAmount != minFTPostionAmount)
+                    },
+                    onClick = {
+                        val config: WatchListConfig = watchListConfig.copy(
+                            includeNFT = checkedStateIncludeNFT,
+                            includeLPinFT = checkedStateIncludeLPInFT,
+                            minNFTAmount = minNFTPostionAmount,
+                            minFTAmount = minFTPostionAmount,
+                        )
+                        onSaveClick(config)
+                        onDismiss.invoke()
+                    },
+                ) {
+                    Text(text = "SAVE SETTINGS")
+                }
+                Button(modifier = Modifier.fillMaxWidth(), onClick = {
                     onDismiss.invoke()
-                },
-            ) {
-                Text(text = "SAVE SETTINGS")
-            }
-            Button(modifier = Modifier.fillMaxWidth(), onClick = {
-                onDismiss.invoke()
-            }) {
-                Text(text = "CANCEL")
+                }) {
+                    Text(text = "CANCEL")
+                }
             }
         }
     }
@@ -730,7 +768,7 @@ fun PositionNFTItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier
-            .padding(4.dp)
+            .padding(vertical = 4.dp, horizontal = 8.dp)
             .fillMaxWidth(),
     ) {
         item.logo?.let {
@@ -738,7 +776,7 @@ fun PositionNFTItem(
         }
 
         Text(
-            text = item.name, modifier = Modifier.width(160.dp), // Adjust width as needed
+            text = item.name, modifier = Modifier.width(140.dp), // Adjust width as needed
             maxLines = 1, overflow = TextOverflow.Ellipsis
         )
 
@@ -778,7 +816,7 @@ fun PositionLPItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier
-            .padding(4.dp)
+            .padding(vertical = 4.dp, horizontal = 8.dp)
             .fillMaxWidth(),
     ) {
         Text(
@@ -797,8 +835,6 @@ fun PositionLPItem(
                 .padding(end = 16.dp),
         )
         Text(text = (item.adaValue / 2).formatToNoDecimals(), modifier = Modifier.width(60.dp))
-
-        Text(text = item.lastUpdated.formattedHHMM())
     }
 }
 
@@ -812,7 +848,7 @@ fun PositionFTItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier
-            .padding(4.dp)
+            .padding(vertical = 4.dp, horizontal = 8.dp)
             .fillMaxWidth(),
     ) {
         LogoImage(
@@ -863,7 +899,10 @@ fun LoadIPFSImage(ipfsUrl: String) {
         imageModel = { formattedUrl },
         modifier = Modifier
             .size(24.dp)
-            .padding(end = 8.dp)
+            .padding(end = 8.dp),
+        imageOptions = ImageOptions(
+            contentScale = ContentScale.Inside
+        ),
     )
 }
 
@@ -873,10 +912,8 @@ fun LogoImage(
     base64String: String?,
     logoCache: LruCache<String, Bitmap>
 ) {
-    // State to hold the bitmap
     val bitmapState = remember { mutableStateOf<Bitmap?>(null) }
 
-    // Check the cache first
     val cachedBitmap = logoCache.get(unit)
     if (cachedBitmap != null) {
         bitmapState.value = cachedBitmap
@@ -885,10 +922,7 @@ fun LogoImage(
             base64String?.let {
                 val bitmap = decodeBase64ToBitmap(base64String)
                 if (bitmap != null) {
-                    //Store in cache
-                    Timber.tag("wims").i("try store in cache !!!!!!!!!!")
                     logoCache.put(unit, bitmap)
-                    // Update state
                     bitmapState.value = bitmap
                 }
             }
