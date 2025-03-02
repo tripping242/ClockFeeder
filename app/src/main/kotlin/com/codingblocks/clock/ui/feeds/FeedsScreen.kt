@@ -393,14 +393,14 @@ fun FeedNFTItem(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier
-                        .padding(4.dp)
+                        .padding(vertical = 4.dp, horizontal = 8.dp)
                         .wrapContentHeight()
                         .fillMaxWidth(),
                 ) {
                     Text(
                         text = item.feedNFT.name,
                         modifier = Modifier
-                            .padding(end = 8.dp),
+                            .padding(horizontal = 8.dp),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )

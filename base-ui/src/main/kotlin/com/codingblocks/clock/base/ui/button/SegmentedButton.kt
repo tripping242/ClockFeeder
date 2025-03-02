@@ -3,6 +3,7 @@ package com.codingblocks.clock.base.ui.button
 import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MultiChoiceSegmentedButtonRow
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -16,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusModifier
+import com.codingblocks.clock.base.ui.theme.AppTheme
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.PersistentList
@@ -34,16 +36,25 @@ fun SingleChoiceSegmentedButton(
     ) {
         options.forEachIndexed { index, label ->
             SegmentedButton(
+                colors = SegmentedButtonDefaults.colors(
+                    activeContainerColor = AppTheme.colors.background,
+                    activeContentColor = AppTheme.colors.onBackground,
+                    inactiveContainerColor = AppTheme.colors.surface,
+                    inactiveContentColor = AppTheme.colors.onSurface
+                ),
                 shape = SegmentedButtonDefaults.itemShape(
                     index = index,
-                    count = options.size
+                    count = options.size,
+
+                    // todo shape
+                    //baseShape =
                 ),
                 onClick = {
                     selectedIndex = index
                     onSelected(index)
                 },
                 selected = index == selectedIndex,
-                label = { Text(label) }
+                label = { Text(label) },
             )
         }
     }
