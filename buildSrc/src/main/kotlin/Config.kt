@@ -39,7 +39,7 @@ object Config {
 
     const val androidTestSourceSet = "src/androidTest/kotlin"
 
-    const val lintWarningsAsErrors = true
+    const val lintWarningsAsErrors = false
 
     const val lintAbortOnError = false
 

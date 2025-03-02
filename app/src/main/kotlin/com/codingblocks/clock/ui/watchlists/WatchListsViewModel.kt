@@ -84,12 +84,9 @@ class WatchListViewModel(
         val errorDuplicateName: Boolean = false,
         val isLoading: Boolean = false,
         val reloadingWatchListNumber: Int = -1,
-        val logoCache: LruCache<String, Bitmap>
+        val logoCache: LruCache<String, Bitmap>,
     )
 
-    fun getLogoForUnit(unit: String) {
-
-    }
     override val controller: Controller<Action, State> =
         viewModelScope.createController<Action, Mutation, State>(
             initialState = State(
@@ -182,7 +179,8 @@ class WatchListViewModel(
                     is Action.GetAndUpdateLogos -> flow {
                         Timber.tag("wims").i("GetAndUpdateLogos")
                         try {
-                            val watchlistWithPositions = dataRepo.watchlistsWithPositions.find { it.watchListConfig.watchlistNumber == action.watchList }
+                            val watchlistWithPositions =
+                                dataRepo.watchlistsWithPositions.find { it.watchListConfig.watchlistNumber == action.watchList }
                             watchlistWithPositions?.let { watchList ->
                                 watchList.positionsFT.forEach {
                                     dataRepo.checkOrGetRemoteLogo(it)
@@ -205,7 +203,6 @@ class WatchListViewModel(
                         } catch (e: Exception) {
                             Timber.d("could not load logos $e")
                         }
-
                     }
 
                     is Action.SelectListToShow -> flow {
@@ -256,12 +253,11 @@ class WatchListViewModel(
                                     )
                                     // also see if any "new" positions need a logo
                                     dispatch(Action.GetAndUpdateLogos(watchlist))
-                            }.onFailure {
-                                emit(Mutation.ErrorChanged("could not retrieve Positions:\n$it"))
-                            }
+                                }.onFailure {
+                                    emit(Mutation.ErrorChanged("could not retrieve Positions:\n$it"))
+                                }
                             emit(Mutation.ShowReloading(-1))
                         }
-
                     }
 
                     is Action.DeleteWatchList -> flow {
@@ -320,9 +316,6 @@ class WatchListViewModel(
                             val updatePositionFtFromLP =
                                 dataRepo.getLPPositionByUnit(action.unit, action.watchList)
                             if (updatePositionFtFromLP != null) with(updatePositionFtFromLP) {
-                                Timber.tag("wims")
-                                    .i("updatePositionFTfromLP ${updatePositionFtFromLP}")
-
                                 // check if we found tokenA or tokenB
                                 val tokenToAdd = if (tokenA == action.unit) tokenA else tokenB
                                 val tokenToAddName =

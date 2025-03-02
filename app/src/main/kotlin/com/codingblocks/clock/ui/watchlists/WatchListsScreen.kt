@@ -104,6 +104,8 @@ fun WatchlistsScreen(
     var expandedItemIndex by remember { mutableStateOf(-1) }
     val coroutineScope = rememberCoroutineScope()
 
+    var showDeleteFeedDialog by remember { mutableStateOf(false) }
+
     LaunchedEffect(expandedItemIndex) {
         if (expandedItemIndex != -1) parentLazyListState.animateScrollToItem(expandedItemIndex) // Smooth scroll to the item
     }
@@ -792,6 +794,21 @@ fun PositionNFTItem(
     item: PositionNFTLocal,
     onAlertClicked: () -> Unit,
 ) {
+    var showDeleteFeedDialog by remember { mutableStateOf(false) }
+    if (showDeleteFeedDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteFeedDialog = false },
+            title = { Text("Delete feed for this NFT") },
+            text = { Text("Feed related to this NFT can only be deleted on the Feeds screen!") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteFeedDialog = false
+                }) {
+                    Text("OK")
+                }
+            },
+        )
+    }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -825,8 +842,9 @@ fun PositionNFTItem(
 
         IconButton(
             onClick = {
-                if (item.showInFeed.not()) onAlertClicked.invoke() else {
-                    // todo dialog, to deactivate a feed, remove it in the feeds page
+                if (item.showInFeed.not()) { onAlertClicked.invoke() }
+                else {
+                    showDeleteFeedDialog = true
                 }
             },
             modifier = Modifier,
@@ -872,6 +890,21 @@ fun PositionFTItem(
     logoCache: LruCache<String, Bitmap>,
     onAlertClicked: () -> Unit
 ) {
+    var showDeleteFeedDialog by remember { mutableStateOf(false) }
+    if (showDeleteFeedDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteFeedDialog = false },
+            title = { Text("Delete feed for this Asset") },
+            text = { Text("Feed related to this asset can only be deleted in the Feeds screen!") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteFeedDialog = false
+                }) {
+                    Text("OK")
+                }
+            },
+        )
+    }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -911,7 +944,13 @@ fun PositionFTItem(
         //Text(text = item.lastUpdated.formattedHHMM())
 
         IconButton(
-            onClick = onAlertClicked,
+            onClick = {
+                if (item.showInFeed.not()) {
+                    onAlertClicked.invoke()
+                } else {
+                    showDeleteFeedDialog = true
+                }
+            },
             modifier = Modifier,
         ) {
             AppIcon(icon = if (item.showInFeed) Icons.Outlined.NotificationsActive else Icons.Outlined.AddAlert)

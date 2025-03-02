@@ -281,6 +281,7 @@ fun FeedNFTItem(
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showDeleteFeedDialog by remember { mutableStateOf(false) }
 
     val optionsAlertValue = remember {
         FeedsViewModel.AlertValue.entries.map { it.label }
