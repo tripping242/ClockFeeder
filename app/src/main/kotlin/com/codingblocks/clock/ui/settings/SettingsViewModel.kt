@@ -36,6 +36,7 @@ class SettingsViewModel(
         data class AutoReloadPositionsChanged(val bool: Boolean) : Mutation()
         data class SmallTrendChanged(val percent: Double) : Mutation()
         data class HighTrendChanged(val percent: Double) : Mutation()
+        data class ChangeCyclingState(val bool: Boolean) : Mutation()
     }
 
     data class State(
@@ -44,7 +45,8 @@ class SettingsViewModel(
         val autoFeed: Boolean,
         val autoReloadPositions: Boolean,
         val smallTrendPercent: Double,
-        val highTrendPercent: Double
+        val highTrendPercent: Double,
+        val isCycling: Boolean,
     )
 
     override val controller: Controller<Action, State> =
@@ -53,8 +55,8 @@ class SettingsViewModel(
                 autoFeed = dataRepo.autoFeed,
                 autoReloadPositions = dataRepo.autoReloadPositions,
                 smallTrendPercent = dataRepo.smallTrendPercent,
-                highTrendPercent = dataRepo.highTrendPercent
-
+                highTrendPercent = dataRepo.highTrendPercent,
+                isCycling = feedCycler.isCycling()
             ),
             mutator = { action ->
                 when (action) {
@@ -88,6 +90,7 @@ class SettingsViewModel(
                             emit(Mutation.ErrorChanged(null))
                             dataRepo.pauseBlockClock()
                             feedCycler.startCycling(dataRepo.cyclingDelayMiliseconds)
+                            emit(Mutation.ChangeCyclingState(true))
                         } catch (e: Exception) {
                             emit(Mutation.ErrorChanged("could not start Cycling the clockFeed"))
                             Timber.d("could not start Cycling $e")
@@ -98,6 +101,7 @@ class SettingsViewModel(
                         try {
                             emit(Mutation.ErrorChanged(null))
                             feedCycler.stopCycling()
+                            emit(Mutation.ChangeCyclingState(false))
                             dataRepo.resumeBlockClock()
                         } catch (e: Exception) {
                             emit(Mutation.ErrorChanged("could not pause Cycling the clockFeed"))
@@ -133,6 +137,7 @@ class SettingsViewModel(
                     is Mutation.AutoReloadPositionsChanged -> previousState.copy(autoReloadPositions = mutation.bool)
                     is Mutation.HighTrendChanged -> previousState.copy(highTrendPercent = mutation.percent)
                     is Mutation.SmallTrendChanged -> previousState.copy(smallTrendPercent = mutation.percent)
+                    is Mutation.ChangeCyclingState -> previousState.copy(isCycling = mutation.bool)
                 }
             }
         )

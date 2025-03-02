@@ -9,7 +9,7 @@ internal const val ROUTE_OVERVIEW: String = "overview"
 
 internal fun NavGraphBuilder.overviewScreen(onListElementClicked: (Int) -> Unit) {
     composable(ROUTE_OVERVIEW) {
-        OverviewScreen(onListElementClicked = onListElementClicked)
+        OverviewScreen()
     }
 }
 

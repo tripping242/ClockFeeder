@@ -21,5 +21,9 @@ import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
 internal val overviewModule = module {
-    viewModel { OverviewViewModel(dataRepo = get()) }
+    viewModel { OverviewViewModel(
+        dataRepo = get(),
+        feedCycler = get(),
+        )
+    }
 }

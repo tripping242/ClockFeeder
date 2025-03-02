@@ -77,6 +77,7 @@ fun SettingsScreen(
                         .fillMaxWidth()
                 ) {
                     Button(
+                        enabled = !state.isCycling,
                         modifier = Modifier
                             .weight(1f)
                             .height(IntrinsicSize.Min),
@@ -88,6 +89,7 @@ fun SettingsScreen(
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Button(
+                        enabled = state.isCycling,
                         modifier = Modifier
                             .weight(1f)
                             .height(IntrinsicSize.Min),

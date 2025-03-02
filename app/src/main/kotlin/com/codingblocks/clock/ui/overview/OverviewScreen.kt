@@ -2,7 +2,12 @@ package com.codingblocks.clock.ui.overview
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -11,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codingblocks.clock.R
 import com.codingblocks.clock.base.ui.scaffold.AppScaffold
@@ -21,9 +27,8 @@ import org.koin.androidx.compose.getViewModel
 @Composable
 fun OverviewScreen(
     viewModel: OverviewViewModel = getViewModel(),
-    onListElementClicked: (id: Int) -> Unit,
 ) {
-    val viewModelState by viewModel.state.collectAsStateWithLifecycle()
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(viewModel) {
         viewModel.dispatch(OverviewViewModel.Action.Initialize)
@@ -31,12 +36,12 @@ fun OverviewScreen(
 
     OverviewView(
         title = stringResource(id = R.string.app_name),
-        onListElementClicked = onListElementClicked,
+        isLoading = state.isLoading,
     )
 }
 
 @Composable
-private fun OverviewView(title: String, onListElementClicked: (id: Int) -> Unit) {
+private fun OverviewView(title: String, isLoading: Boolean) {
     AppScaffold { contentPadding ->
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -48,17 +53,19 @@ private fun OverviewView(title: String, onListElementClicked: (id: Int) -> Unit)
                 text = "ClockFeeder",
                 style = AppTheme.typography.h4
             )
+            if (isLoading) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .padding(32.dp)
+                            .size(56.dp)
+                    )
+                }
+            }
         }
-    }
-}
-
-@Preview
-@Composable
-private fun OverviewPreview() {
-    AppTheme {
-        OverviewView(
-            title = stringResource(id = R.string.app_name),
-            onListElementClicked = {},
-        )
     }
 }

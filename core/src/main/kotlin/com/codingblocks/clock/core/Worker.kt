@@ -20,7 +20,7 @@ class FetchPricesWorker(
     override suspend fun doWork(): Result {
         return withContext(Dispatchers.IO) {
             try {
-                Timber.tag("wims").i("doing work")
+                Timber.tag("wims").i("doing work: fetching prices")
                 // Fetch and store token prices
                 dataRepo.getAndStorePricesForTokens()
 

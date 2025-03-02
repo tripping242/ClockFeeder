@@ -169,13 +169,18 @@ fun WatchlistsScreen(
                     color = md_theme_light_error,
                 )
             }
-            // todo move to FAB
             if (state.isLoading) {
-                CircularProgressIndicator(
+                Row(
                     modifier = Modifier
-                        .padding(32.dp)
-                        .size(56.dp)
-                )
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .padding(32.dp)
+                            .size(56.dp)
+                    )
+                }
             } else {
                 Button(
                     modifier = Modifier.fillMaxWidth(),

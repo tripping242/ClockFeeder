@@ -20,15 +20,20 @@ class FeedCycler(
 ) {
     private val scope = CoroutineScope(Dispatchers.IO)
     private var isPaused = false
+    private var isCycling = false
+    private val priceCheckEvery: Long = 5 * 60 * 1000
+    private var timePassedSinceLastPriceCheck: Long = 0
+
+    fun isCycling(): Boolean = isCycling
 
     fun startCycling(defaultCycleTime: Long) {
+        isCycling = true
         Timber.tag("wims").i("start cycling")
         scope.launch {
             var currentDelay = defaultCycleTime
             while (true) {
                 if (!isPaused) {
                     val items = dataRepo.getAllFeedToClockItems()
-                    Timber.tag("wims").i("dataRepo.getAllFeedToClockItems() returns ${items.size} items")
                     if (items.isNotEmpty()) {
                         val item = items[0]
                         // Process the item , on success continue, else retry after returned timeout seconds.
@@ -48,6 +53,16 @@ class FeedCycler(
                             currentDelay = retryDelay
                         }
                     }
+                    // while we cycle the feed to the clock, be more active with retrieving prices
+                    if (timePassedSinceLastPriceCheck > priceCheckEvery) {
+                        launch {
+                            dataRepo.getAndStorePricesForTokens()
+                            dataRepo.checkFTAlertsAfterPriceUpdates()
+                            timePassedSinceLastPriceCheck = 0
+                        }
+                    } else {
+                        timePassedSinceLastPriceCheck += currentDelay
+                    }
                 }
                 delay(currentDelay)
             }
@@ -63,6 +78,7 @@ class FeedCycler(
     }
 
     fun stopCycling() {
+        isCycling = false
         scope.cancel() // Cancel the coroutine scope when no longer needed
     }
 

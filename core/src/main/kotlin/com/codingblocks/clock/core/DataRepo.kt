@@ -24,6 +24,7 @@ import android.util.Base64
 import android.util.LruCache
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ListenableWorker
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequest
@@ -133,6 +134,9 @@ interface DataRepo {
     suspend fun updateOrInsertPositions(watchList: Int, positionResponse: PositionsResponse)
     suspend fun deleteWatchlist(watchList: Int)
 
+    // init
+    suspend fun loadPositionsForAllWatchlists()
+
     // watchlist with contents
     suspend fun addWatchlist(
         name: String,
@@ -190,6 +194,8 @@ interface DataRepo {
 
     suspend fun getAllEnabledNFTAlerts(): List<CustomNFTAlert>
     suspend fun getAllEnabledFTAlerts(): List<CustomFTAlert>
+
+    suspend fun checkFTAlertsAfterPriceUpdates()
 
     // Logos
     suspend fun getAndStoreRemoteLogo(unit: String)
@@ -506,6 +512,14 @@ class CoreDataRepo(
         watchlistsDao.deleteWatchlistById(watchList)
     }
 
+    override suspend fun loadPositionsForAllWatchlists() {
+        withContext(Dispatchers.IO) {
+            watchlistsDao.getAllWatchlists().forEach { watchlist ->
+                watchlist.walletAddress?.let { tapToolsManager.getPositionsForAddress(it) }
+            }
+        }
+    }
+
     override suspend fun addWatchlist(
         name: String,
         includeLPinFT: Boolean,
@@ -668,6 +682,51 @@ class CoreDataRepo(
 
     override suspend fun getAllEnabledFTAlerts(): List<CustomFTAlert> =
         customFTAlertDao.getAllEnabledAlerts()
+
+    override suspend fun checkFTAlertsAfterPriceUpdates() {
+        withContext(Dispatchers.IO) {
+            try {
+                // Fetch all enabled alerts
+                val alerts = getAllEnabledFTAlerts()
+
+                // Process each alert
+                alerts.forEach { alert ->
+                    Timber.tag("wims").i("check for alert: ${alert.ticker} ${alert.threshold} and priceOrVolume ${alert.priceOrVolume}")
+
+                    // Fetch the latest two stats entries for the policy
+                    val stats = getLatest2PricesForUnit(alert.feedPositionUnit)
+                    Timber.tag("wims").i("prices.size == ${stats.size}")
+                    if (stats.size == 2) {
+
+                        val previousStat = stats[1]
+                        val currentStat = stats[0]
+
+                        Timber.tag("wims").i("previous price ${previousStat.price} treshold ${alert.threshold} current ${currentStat.price}")
+                        // Check if the alert condition is met
+                        val conditionMet = if (alert.priceOrVolume) {
+                            checkIfNotAlreadyTriggeredByThesePrices(alert.lastTriggeredTimeStamp, previousStat.timestamp)
+                                    && checkPriceCrossing(alert.crossingOver, alert.threshold, previousStat.price, currentStat.price)
+                        } else {
+                            // no volume yet on FTAlert
+                            false
+                        }
+
+                        if (conditionMet) {
+                            triggerAlerts(alert, currentStat)
+                            if (alert.onlyOnce) {
+                                deleteAlert(alert)
+                            } else {
+                                // update alert with lastAlerted Timestamp
+                                setLastTriggered(alert)
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Timber.d("could not check alerts with token prices")
+            }
+        }
+    }
 
     override suspend fun getAndStoreRemoteLogo(unit: String) {
         // todo load from website
@@ -882,9 +941,6 @@ class CoreDataRepo(
     }
 
     override suspend fun loadAndUpdateNextFeedToClockItem() {
-        // get getAllFeedNFTClockEnabled, check whihc one maps to next  getAllFeedToClockItems
-        // else getAllFeedFTClockEnabled check whihc one maps to next  getAllFeedToClockItems
-        // if found, do price check as below
         val validTime =
             System.currentTimeMillis() - (settingsManager.settings.priceTooOldSeconds * 1000)
         val previousValidTime =
@@ -1078,7 +1134,7 @@ class CoreDataRepo(
         alert: CustomNFTAlert,
         reachedPrice: Double
     ) {
-        Timber.tag("wims").i("ALERT NFT being added to front of the Clock feed $alert")
+        Timber.tag("wims").i("ALERT being added to front of the Clock feed $alert")
         val feedToClockItem = FeedToClockItem(
             unit = alert.threshold.toString(),
             name = alert.ticker,
@@ -1150,6 +1206,18 @@ class CoreDataRepo(
             FeedNFTWithAlerts(feedNFT, alerts)
         } else {
             null
+        }
+    }
+    private suspend fun triggerAlerts(alert: CustomFTAlert, currentStat: FTPriceEntity) {
+        if (alert.pushAlert) {
+            Timber.tag("wims").i("push alert now for ${alert.ticker}")
+            pushFTAlert(alert, currentStat.price)
+        }
+        if (alert.clockAlert) {
+            addAlertFTToFeedToClockItems(alert, currentStat.price)
+        }
+        if (alert.mail) {
+            // Send email alert (implement this in dataRepo if needed)
         }
     }
 }
@@ -1249,5 +1317,22 @@ fun decodeBase64ToBitmap(base64String: String): Bitmap? {
     } catch (e: IllegalArgumentException) {
         e.printStackTrace()
         null
+    }
+}
+
+private fun checkIfNotAlreadyTriggeredByThesePrices(lastTriggeredTimeStamp: Long?, previousPriceTimeStamp: Long): Boolean =
+    if (lastTriggeredTimeStamp == null) true else lastTriggeredTimeStamp < previousPriceTimeStamp
+
+
+private fun checkPriceCrossing(
+    crossingOver: Boolean,
+    threshold: Double,
+    previousPrice: Double,
+    currentPrice: Double
+): Boolean {
+    return if (crossingOver) {
+        previousPrice < threshold && currentPrice >= threshold
+    } else {
+        previousPrice > threshold && currentPrice <= threshold
     }
 }
