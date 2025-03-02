@@ -466,7 +466,7 @@ fun AddWatchListDialog(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(AppTheme.colors.surface)
             .verticalScroll(scrollState)
             .padding(16.dp),
         horizontalAlignment = Alignment.Start,
@@ -584,8 +584,8 @@ fun AddWatchListDialog(
                     name = watchListName,
                     includeNFT = checkedStateIncludeNFT,
                     includeLPinFT = checkedStateIncludeLPInFT,
-                    // todo, do we need this. We either include lp positions in ft aggregated or leave it out.
-                    // but if left out, we will not get ft positions for unique lp positions
+                    minNFTAmount = minNFTPostionAmount,
+                    minFTAmount = minFTPostionAmount,
                     showLPTab = false,
                     walletAddress = resolvedAddress,
                     createdAt = ZonedDateTime.now(),
@@ -705,7 +705,6 @@ fun SettingsDialog(
                         includeLPinFT = checkedStateIncludeLPInFT,
                         minNFTAmount = minNFTPostionAmount,
                         minFTAmount = minFTPostionAmount,
-                        // showLPTab = showLPTab,
                     )
                     onSaveClick(config)
                     onDismiss.invoke()

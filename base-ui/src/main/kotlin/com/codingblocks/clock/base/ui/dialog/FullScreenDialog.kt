@@ -30,8 +30,6 @@ fun FullScreenDialog(
     ) {
         Dialog(
             onDismissRequest = onDismissRequest,
-            // only allow dismissRequests, to be handled in calling function (are you sure)...
-            // dont close dialog on back press, as we cant show "are you sure"
             DialogProperties(
                 usePlatformDefaultWidth = false,
                 dismissOnBackPress = false,

@@ -217,7 +217,9 @@ class WatchListViewModel(
                         if (action.address.startsWith("$")) {
                             // resolve with handle
                             dataRepo.resolveAdaHandle(action.address.removePrefix("$"))
-                                .onSuccess { emit(Mutation.ResolvedAddressChanged(it)) }
+                                .onSuccess {
+                                    emit(Mutation.ResolvedAddressChanged(it))
+                                }
                                 .onFailure { emit(Mutation.ResolveErrorChanged("Could not resolve handle")) }
                         } else {
                             dataRepo.getStakeAddress(action.address)
