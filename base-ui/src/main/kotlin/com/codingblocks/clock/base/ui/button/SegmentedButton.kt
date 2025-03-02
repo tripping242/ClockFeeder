@@ -1,9 +1,6 @@
 package com.codingblocks.clock.base.ui.button
 
 import android.annotation.SuppressLint
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MultiChoiceSegmentedButtonRow
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -12,15 +9,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.focusModifier
 import com.codingblocks.clock.base.ui.theme.AppTheme
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.ImmutableSet
-import kotlinx.collections.immutable.PersistentList
 
 @Composable
 fun SingleChoiceSegmentedButton(
@@ -45,9 +38,6 @@ fun SingleChoiceSegmentedButton(
                 shape = SegmentedButtonDefaults.itemShape(
                     index = index,
                     count = options.size,
-
-                    // todo shape
-                    //baseShape =
                 ),
                 onClick = {
                     selectedIndex = index
@@ -72,6 +62,12 @@ fun MultiChoiceTwoSegmentedButton(
         options.forEachIndexed { index, label ->
             val isChecked = selectedOptions.contains(index)
             SegmentedButton(
+                colors = SegmentedButtonDefaults.colors(
+                    activeContainerColor = AppTheme.colors.background,
+                    activeContentColor = AppTheme.colors.onBackground,
+                    inactiveContainerColor = AppTheme.colors.surface,
+                    inactiveContentColor = AppTheme.colors.onSurface
+                ),
                 shape = SegmentedButtonDefaults.itemShape(
                     index = index,
                     count = options.size

@@ -35,6 +35,7 @@ import androidx.compose.material.TextField
 import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AddAlert
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.Refresh
@@ -83,6 +84,7 @@ import com.codingblocks.clock.core.local.data.PositionNFTLocal
 import com.codingblocks.clock.core.local.data.WatchListConfig
 import com.codingblocks.clock.core.local.data.WatchlistWithPositions
 import com.codingblocks.clock.core.local.data.formattedHHMM
+import com.codingblocks.clock.ui.feeds.FeedsViewModel
 import com.codingblocks.clock.ui.utils.loadBase64WithGlide
 import com.codingblocks.clock.ui.watchlists.WatchListViewModel.PositionItem
 import com.codingblocks.clock.ui.watchlists.WatchListViewModel.ShowType
@@ -369,7 +371,14 @@ fun ExpandableItem(
                             showType = if (currentWatchListWithPositions.watchListConfig.includeLPinFT) ShowType.FT_LP else ShowType.FT
                         },
                     ) {
-                        Text(text = " FT")
+                        Row(
+                            modifier = Modifier,
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            if (showType == ShowType.FT || (currentWatchListWithPositions.watchListConfig.includeLPinFT && showType == ShowType.FT_LP)) AppIcon(icon = Icons.Outlined.Check)
+                            Text(text = " FT")
+                        }
                     }
                     if (currentWatchListWithPositions.watchListConfig.includeNFT) {
                         Button(
@@ -379,7 +388,14 @@ fun ExpandableItem(
                             },
 
                         ) {
-                            Text(text = "NFT")
+                            Row(
+                                modifier = Modifier,
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                            ) {
+                                if (showType == ShowType.NFT) AppIcon(icon = Icons.Outlined.Check)
+                                Text(text = "NFT")
+                            }
                         }
                     }
                     if (!currentWatchListWithPositions.watchListConfig.includeLPinFT) {
@@ -389,7 +405,14 @@ fun ExpandableItem(
                                 showType = ShowType.LP
                             },
                         ) {
-                            Text(text = " LP")
+                            Row(
+                                modifier = Modifier,
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                            ) {
+                                if (showType == ShowType.LP) AppIcon(icon = Icons.Outlined.Check)
+                                Text(text = " LP")
+                            }
                         }
                     }
                 }

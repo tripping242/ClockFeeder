@@ -30,6 +30,7 @@ import androidx.compose.material.icons.outlined.AlarmOff
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.ArrowDropUp
 import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.LooksOne
 import androidx.compose.material.icons.outlined.NotificationsActive
@@ -109,32 +110,46 @@ fun FeedsScreen(
                     .padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                SingleChoiceSegmentedButton(
+/*                SingleChoiceSegmentedButton(
                     modifier = Modifier.fillMaxWidth(),
                     options = optionsShowTypeValue,
                     selected = optionsShowTypeValue.indexOf(showType.name),
                     onSelected = { index ->
                         showType = if (optionsShowTypeValue[index] == ShowType.FT.name) ShowType.FT else ShowType.NFT
                     }
-                )
-                /*Button(
+                )*/
+                Button(
                     modifier = Modifier,
                     onClick = {
                         showType =
                             ShowType.FT
                     },
                 ) {
-                    Text(text = " FT")
+                    Row(
+                        modifier = Modifier,
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        if (showType == ShowType.FT) AppIcon(icon = Icons.Outlined.Check)
+                        Text(text = " FT")
+                    }
+
                 }
                 Button(
                     modifier = Modifier,
                     onClick = {
                         showType = ShowType.NFT
                     },
-
+                ) {
+                    Row(
+                        modifier = Modifier,
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
                     ) {
-                    Text(text = "NTF")
-                }*/
+                        if (showType == ShowType.NFT) AppIcon(icon = Icons.Outlined.Check)
+                        Text(text = "NFT")
+                    }
+                }
             }
 
             if (showType == ShowType.FT) {
