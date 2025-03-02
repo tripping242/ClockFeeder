@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
@@ -46,8 +47,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -69,11 +68,11 @@ import com.codingblocks.clock.core.local.data.CustomFTAlert
 import com.codingblocks.clock.core.local.data.CustomNFTAlert
 import com.codingblocks.clock.core.local.data.FeedFTWithAlerts
 import com.codingblocks.clock.core.local.data.FeedNFTWithAlerts
-import com.codingblocks.clock.core.local.data.formattedHHMM
 import com.codingblocks.clock.ui.feeds.FeedsViewModel.ShowType
-import com.codingblocks.clock.ui.watchlists.LogoImage
+import com.codingblocks.clock.ui.watchlists.WatchListViewModel
 import kotlinx.collections.immutable.toImmutableList
 import org.koin.androidx.compose.getViewModel
+import timber.log.Timber
 
 @Composable
 fun FeedsScreen(
@@ -81,15 +80,17 @@ fun FeedsScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val parentLazyListState: LazyListState = rememberLazyListState()
+    val parentLazyListState2: LazyListState = rememberLazyListState()
     val childLazyListState = rememberLazyListState()
-    var expandedItemIndex by remember { mutableStateOf(-1) }
     var showType by remember { mutableStateOf(FeedsViewModel.ShowType.FT) }
-    val optionsShowTypeValue = remember {
-        FeedsViewModel.ShowType.entries.map { it.name }
-    }.toImmutableList()
 
+    var expandedItemIndex by remember { mutableStateOf(-1) }
     LaunchedEffect(expandedItemIndex) {
         if (expandedItemIndex != -1) parentLazyListState.animateScrollToItem(expandedItemIndex) // Smooth scroll to the item
+    }
+    var expandedItemIndex2 by remember { mutableStateOf(-1) }
+    LaunchedEffect(expandedItemIndex2) {
+        if (expandedItemIndex2 != -1) parentLazyListState2.animateScrollToItem(expandedItemIndex2) // Smooth scroll to the item
     }
     LaunchedEffect(viewModel) {
         viewModel.dispatch(FeedsViewModel.Action.Initialize)
@@ -110,14 +111,6 @@ fun FeedsScreen(
                     .padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-/*                SingleChoiceSegmentedButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    options = optionsShowTypeValue,
-                    selected = optionsShowTypeValue.indexOf(showType.name),
-                    onSelected = { index ->
-                        showType = if (optionsShowTypeValue[index] == ShowType.FT.name) ShowType.FT else ShowType.NFT
-                    }
-                )*/
                 Button(
                     modifier = Modifier,
                     onClick = {
@@ -159,10 +152,22 @@ fun FeedsScreen(
                         .fillMaxWidth()
                         .wrapContentHeight()
                 ) {
-                    items(state.feedFTWithAlerts)
-                    { item ->
+                    itemsIndexed(
+                        items = state.feedFTWithAlerts,
+                        key = { index, item -> item.feedFT.positionUnit }
+                    )
+                    { index, item ->
                         FeedFTItem(
                             item = item,
+                            isExpanded = expandedItemIndex == index,
+                            onClick = {
+                                if (expandedItemIndex != index) {
+                                    expandedItemIndex = index
+                                } else {
+                                    // Toggle off if clicked again
+                                    expandedItemIndex = -1
+                                }
+                            },
                             onDeleteFeedClicked = {
                                 viewModel.dispatch(
                                     FeedsViewModel.Action.DeleteFeedFTItem(
@@ -206,10 +211,22 @@ fun FeedsScreen(
                         .fillMaxWidth()
                         .wrapContentHeight()
                 ) {
-                    items(state.feedNFTWithAlerts)
-                    { item ->
+                    itemsIndexed(
+                        items = state.feedNFTWithAlerts,
+                        key = { index, item -> item.feedNFT.positionPolicy }
+                    )
+                    { index, item ->
                         FeedNFTItem(
                             item = item,
+                            isExpanded = expandedItemIndex2 == index,
+                            onClick = {
+                                if (expandedItemIndex2 != index) {
+                                    expandedItemIndex2 = index
+                                } else {
+                                    // Toggle off if clicked again
+                                    expandedItemIndex2 = -1
+                                }
+                            },
                             onDeleteFeedClicked = {
                                 viewModel.dispatch(
                                     FeedsViewModel.Action.DeleteFeedNFTItem(
@@ -253,6 +270,8 @@ fun FeedsScreen(
 @Composable
 fun FeedNFTItem(
     item: FeedNFTWithAlerts,
+    isExpanded: Boolean,
+    onClick: () -> Unit,
     onDeleteFeedClicked: () -> Unit,
     onFeedClockPriceChanged: () -> Unit,
     onFeedClockLightsChanged: () -> Unit,
@@ -260,7 +279,6 @@ fun FeedNFTItem(
     onDeleteAlertClicked: (CustomNFTAlert) -> Unit,
     state: LazyListState,
 ) {
-    var isExpanded by remember { mutableStateOf(false) }
     var showAddDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -399,7 +417,7 @@ fun FeedNFTItem(
     ExpandableCard(
         isExpanded = isExpanded,
         onClick = {
-            if (item.alerts.isNotEmpty()) { isExpanded = !isExpanded }
+            if (item.alerts.isNotEmpty()) onClick.invoke()
         },
         topContent = {
             Column()
@@ -462,7 +480,7 @@ fun FeedNFTItem(
                     }
                     IconButton(
                         enabled = item.alerts.isNotEmpty(),
-                        onClick = { isExpanded = !isExpanded },
+                        onClick = onClick,
                         modifier = Modifier,
                     ) {
                         AppIcon(icon = if (isExpanded) Icons.Outlined.ArrowDropUp else Icons.Outlined.ArrowDropDown)
@@ -502,6 +520,8 @@ fun FeedNFTItem(
 @Composable
 fun FeedFTItem(
     item: FeedFTWithAlerts,
+    isExpanded: Boolean,
+    onClick: () -> Unit,
     onDeleteFeedClicked: () -> Unit,
     onFeedClockPriceChanged: () -> Unit,
     onFeedClockVolumeChanged: () -> Unit,
@@ -510,13 +530,9 @@ fun FeedFTItem(
     logoCache: LruCache<String, Bitmap>,
     state: LazyListState,
 ) {
-    var isExpanded by remember { mutableStateOf(false) }
     var showAddDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    val optionsAlertValue = remember {
-        FeedsViewModel.AlertValue.entries.map { it.label }
-    }.toImmutableList()
     val optionsAlertTrigger = remember {
         FeedsViewModel.AlertTrigger.entries.map { it.label }
     }.toImmutableList()
@@ -629,7 +645,7 @@ fun FeedFTItem(
     ExpandableCard(
         isExpanded = isExpanded,
         onClick = {
-            if (item.alerts.isNotEmpty()) { isExpanded = !isExpanded }
+            if (item.alerts.isNotEmpty()) onClick.invoke()
         },
         topContent = {
             Column()
@@ -692,7 +708,7 @@ fun FeedFTItem(
                     }
                     IconButton(
                         enabled = item.alerts.isNotEmpty(),
-                        onClick = { isExpanded = !isExpanded },
+                        onClick = onClick,
                         modifier = Modifier,
                     ) {
                         AppIcon(icon = if (isExpanded) Icons.Outlined.ArrowDropUp else Icons.Outlined.ArrowDropDown)
@@ -744,6 +760,7 @@ fun NFTAlertItem(
 
         if (item.priceOrVolume) {
             AppIcon(icon = Icons.Outlined.WaterfallChart)
+            Timber.tag("wims").i("item.threshold ${item.threshold} formatted ${item.threshold.formatMax8decimals()}")
             Text(
                 text = item.threshold.formatMax8decimals()  + " ₳",
                 modifier = Modifier

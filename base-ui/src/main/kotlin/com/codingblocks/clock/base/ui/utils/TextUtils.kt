@@ -27,13 +27,24 @@ fun prettyPrintJson(
     }
 }
 
-@SuppressLint("DefaultLocale")
+/*@SuppressLint("DefaultLocale")
 fun Double.formatMax8decimals(): String {
     return when {
         this >= 100 -> String.format("%.0f", this).removeSuffix(".0")
         this >= 1 -> String.format("%.4f", this).removeSuffix("0").removeSuffix("0").removeSuffix("0").removeSuffix("0").removeSuffix(".")
         this >= 0.01 -> String.format("%.6f", this).removeSuffix("0").removeSuffix("0").removeSuffix(".")
         else -> String.format("%.8f", this).removeSuffix("0").removeSuffix("0").removeSuffix(".")
+    }
+}*/
+
+@SuppressLint("DefaultLocale")
+fun Double.formatMax8decimals(): String {
+    return when {
+        this == this.toLong().toDouble() -> String.format("%.0f", this)
+        this >= 100 -> String.format("%.0f", this)
+        this >= 1 -> String.format("%.4f", this).trimEnd('0').trimEnd('.')
+        this >= 0.01 -> String.format("%.6f", this).trimEnd('0').trimEnd('.')
+        else -> String.format("%.8f", this).trimEnd('0').trimEnd('.')
     }
 }
 
