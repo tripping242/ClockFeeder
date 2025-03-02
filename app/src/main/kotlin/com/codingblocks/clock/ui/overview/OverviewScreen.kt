@@ -49,20 +49,6 @@ private fun OverviewView(title: String, onListElementClicked: (id: Int) -> Unit)
                 style = AppTheme.typography.h4
             )
         }
-
-        /*LazyColumn(
-            modifier = Modifier.padding(contentPadding),
-        ) {
-            items((0..500).toList()) {
-                Text(
-                    text = it.toString(),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onListElementClicked(it) }
-                        .padding(AppTheme.dimens.dimen16),
-                )
-            }
-        }*/
     }
 }
 

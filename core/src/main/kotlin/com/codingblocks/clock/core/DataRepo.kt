@@ -79,6 +79,18 @@ interface DataRepo {
     val feedFTWithAlerts: List<FeedFTWithAlerts>
     val feedsNFTWithAlerts: List<FeedNFTWithAlerts>
 
+    val autoFeed: Boolean
+    fun setAutoFeed(bool: Boolean)
+
+    val autoReloadPositions: Boolean
+    fun setAutoReloadPositions(bool: Boolean)
+
+    val smallTrendPercent: Double
+    fun setSmallTrendPercent(percent: Double)
+
+    val highTrendPercent: Double
+    fun setHighTrendPercent(percent: Double)
+
     val cyclingDelayMiliseconds: Long
     val logoCache:LruCache<String, Bitmap>
 
@@ -129,6 +141,8 @@ interface DataRepo {
         showLPTab: Boolean,
         walletAddress: String?
     ): Int
+
+
 
     suspend fun findWatchlistWithAddressOrName(address: String?, name: String): WatchListConfig?
     suspend fun updateWatchlistSettings(watchListConfig: WatchListConfig)
@@ -195,6 +209,7 @@ interface DataRepo {
     // need to get updated when feed item deleted, or when alert triggers...
     suspend fun loadAndUpdateFeedFTToClockItems()
     suspend fun loadAndUpdateFeedNFTToClockItems()
+    suspend fun loadAndUpdateNextFeedToClockItem()
     suspend fun addAlertFTToFeedToClockItems(alert: CustomFTAlert, reachedPrice: Double)
     suspend fun addAlertNFTToFeedToClockItems(alert: CustomNFTAlert, reachedPrice: Double)
     suspend fun pushFTAlert(alert: CustomFTAlert, reachedPrice: Double)
@@ -366,8 +381,36 @@ class CoreDataRepo(
         get() = database.getFeedFTDao().getFeedsFTWithAlerts()
     override val feedsNFTWithAlerts: List<FeedNFTWithAlerts>
         get() = database.getFeedNFTDao().getFeedsNFTWithAlerts()
+    override val autoFeed: Boolean
+        get() = settingsManager.settings.autoFeed
     override val cyclingDelayMiliseconds: Long
         get() = settingsManager.settings.feedClockCycleSeconds * 1000.toLong()
+
+
+    override fun setAutoFeed(bool: Boolean) {
+        settingsManager.settings.autoFeed = bool
+    }
+
+    override val autoReloadPositions: Boolean
+        get() = settingsManager.settings.autoReloadPositions
+
+    override fun setAutoReloadPositions(bool: Boolean) {
+        settingsManager.settings.autoReloadPositions = bool
+    }
+
+    override val smallTrendPercent: Double
+        get() = settingsManager.settings.smallTrendPercent
+
+    override fun setSmallTrendPercent(percent: Double) {
+        settingsManager.settings.smallTrendPercent = percent
+    }
+
+    override val highTrendPercent: Double
+        get() = settingsManager.settings.highTrendPercent
+
+    override fun setHighTrendPercent(percent: Double) {
+        settingsManager.settings.highTrendPercent = percent
+    }
 
     override suspend fun getClockStatus(): Result<StatusResponse> = clockManager.getStatus()
     override suspend fun sendFTPriceFeed(
@@ -781,12 +824,9 @@ class CoreDataRepo(
         val previousValidTime =
             System.currentTimeMillis() - (3 * settingsManager.settings.priceTooOldSeconds * 1000)
         feedFTDao.getAllFeedFTClockEnabled().forEach { item ->
-            Timber.tag("wims").i("FeedFTOToClock item $item.name}")
-
             val latestPrice =
                 ftPriceDao.getLatestValidPricesForUnit(item.positionUnit, validTime, 1)
                     ?.getOrNull(0)?.price
-            Timber.tag("wims").i("          has latetestPrice: $latestPrice")
             if (latestPrice != null) {
                 var percentageChange: Double? = null
                 if (item.feedClockVolume) {
@@ -800,7 +840,6 @@ class CoreDataRepo(
                         } catch (e: Exception) {
                             null
                         }
-                    Timber.tag("wims").i("          has previousPrice: $previousPrice")
                     percentageChange = if (previousPrice != null && previousPrice != 0.0) {
                         ((latestPrice - previousPrice) / previousPrice) * 100
                     } else {
@@ -842,6 +881,117 @@ class CoreDataRepo(
         }
     }
 
+    override suspend fun loadAndUpdateNextFeedToClockItem() {
+        // get getAllFeedNFTClockEnabled, check whihc one maps to next  getAllFeedToClockItems
+        // else getAllFeedFTClockEnabled check whihc one maps to next  getAllFeedToClockItems
+        // if found, do price check as below
+        val validTime =
+            System.currentTimeMillis() - (settingsManager.settings.priceTooOldSeconds * 1000)
+        val previousValidTime =
+            System.currentTimeMillis() - (3 * settingsManager.settings.priceTooOldSeconds * 1000)
+        val nextFeedToclock = getAllFeedToClockItems().firstOrNull()
+        nextFeedToclock?.let {
+            if (nextFeedToclock.feedType == FeedType.FeedNFT) {
+                feedNFTDao.getAllFeedNFTClockEnabled().find {
+                    it.positionPolicy == nextFeedToclock.unit
+                }?.let { item ->
+                    Timber.tag("wims").i("FeedNFTToClock item $item}")
+                    val latestPrice =
+                        nftStatsDao.getLatestValidPricesForPolicy(item.positionPolicy, validTime, 1)
+                            ?.getOrNull(0)?.price
+
+                    if (latestPrice != null) {
+                        var percentageChange: Double? = null
+                        if (item.feedClockVolume) {
+                            val previousPrice =
+                                try {
+                                    nftStatsDao.getLatestValidPricesForPolicy(
+                                        item.positionPolicy,
+                                        previousValidTime,
+                                        10
+                                    )?.lastOrNull()?.price
+                                } catch (e: Exception) {
+                                    null
+                                }
+                            Timber.tag("wims").i("          has previousPrice: $previousPrice")
+
+                            percentageChange = if (previousPrice != null && previousPrice != 0.0) {
+                                ((latestPrice - previousPrice) / previousPrice) * 100
+                            } else {
+                                null
+                            }
+                        }
+
+                        val colorMode = when {
+                            percentageChange == null -> null
+                            percentageChange > highTrendPercent -> ColorMode.BlinkUpMuch
+                            percentageChange > smallTrendPercent -> ColorMode.BlinkUp
+                            percentageChange < -highTrendPercent -> ColorMode.BlinkDownMuch
+                            percentageChange < -smallTrendPercent -> ColorMode.BlinkDown
+                            else -> ColorMode.BlinkOnce
+                        }
+                        feedTheclockDao.update(
+                            nextFeedToclock.copy(
+                                price = latestPrice,
+                                colorMode = colorMode
+                            )
+                        )
+                    }
+                }
+            } else if (nextFeedToclock.feedType == FeedType.FeedFT) {
+                feedFTDao.getAllFeedFTClockEnabled().find {
+                    it.positionUnit == nextFeedToclock.unit
+                }?.let { item ->
+                    Timber.tag("wims").i("FeedFTToClock item $item}")
+                    val latestPrice =
+                        ftPriceDao.getLatestValidPricesForUnit(item.positionUnit, validTime, 1)
+                            ?.getOrNull(0)?.price
+
+                    if (latestPrice != null) {
+                        var percentageChange: Double? = null
+                        if (item.feedClockVolume) {
+                            val previousPrice =
+                                try {
+                                    ftPriceDao.getLatestValidPricesForUnit(
+                                        item.positionUnit,
+                                        previousValidTime,
+                                        10
+                                    )?.lastOrNull()?.price
+                                } catch (e: Exception) {
+                                    null
+                                }
+                            Timber.tag("wims").i("          has previousPrice: $previousPrice")
+
+                            percentageChange = if (previousPrice != null && previousPrice != 0.0) {
+                                ((latestPrice - previousPrice) / previousPrice) * 100
+                            } else {
+                                null
+                            }
+                        }
+
+                        val colorMode = when {
+                            percentageChange == null -> null
+                            percentageChange!! > highTrendPercent -> ColorMode.BlinkUpMuch
+                            percentageChange!! > smallTrendPercent -> ColorMode.BlinkUp
+                            percentageChange!! < -highTrendPercent -> ColorMode.BlinkDownMuch
+                            percentageChange!! < -smallTrendPercent -> ColorMode.BlinkDown
+                            else -> ColorMode.BlinkOnce
+                        }
+                        feedTheclockDao.update(
+                            nextFeedToclock.copy(
+                                price = latestPrice,
+                                colorMode = colorMode
+                            )
+                        )
+                    }
+                }
+            } else {
+                // not found, probably an alert coming
+            }
+        }
+    }
+
+    // todo load this in worker??
     override suspend fun loadAndUpdateFeedNFTToClockItems() {
         val validTime =
             System.currentTimeMillis() - (settingsManager.settings.priceTooOldSeconds * 1000)
@@ -852,7 +1002,6 @@ class CoreDataRepo(
             val latestPrice =
                 nftStatsDao.getLatestValidPricesForPolicy(item.positionPolicy, validTime, 1)
                     ?.getOrNull(0)?.price
-            Timber.tag("wims").i("          has latetestPrice: $latestPrice")
 
             if (latestPrice != null) {
                 var percentageChange: Double? = null

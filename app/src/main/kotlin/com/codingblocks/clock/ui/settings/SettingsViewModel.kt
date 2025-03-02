@@ -23,40 +23,56 @@ class SettingsViewModel(
         data object LoadAndUpdateFeedNFTToClockItems : Action()
         data object StartClockFeedCycler : Action()
         data object PauseClockFeedCycler : Action()
+        data class AutoFeedChanged(val bool: Boolean) : Action()
+        data class AutoReloadPositionsChanged(val bool: Boolean) : Action()
+        data class SmallTrendChanged(val percent: Double) : Action()
+        data class HighTrendChanged(val percent: Double) : Action()
     }
 
     sealed class Mutation {
         data class FeedToClockItemsChanged(val items: List<FeedToClockItem>) : Mutation()
         data class ErrorChanged(val errorMessage: String?) : Mutation()
+        data class AutoFeedChanged(val bool: Boolean) : Mutation()
+        data class AutoReloadPositionsChanged(val bool: Boolean) : Mutation()
+        data class SmallTrendChanged(val percent: Double) : Mutation()
+        data class HighTrendChanged(val percent: Double) : Mutation()
     }
 
     data class State(
         val feedToClockItems: List<FeedToClockItem> = emptyList(),
         val error: String? = null,
+        val autoFeed: Boolean,
+        val autoReloadPositions: Boolean,
+        val smallTrendPercent: Double,
+        val highTrendPercent: Double
     )
 
     override val controller: Controller<Action, State> =
         viewModelScope.createController<Action, Mutation, State>(
-            initialState = State(),
+            initialState = State(
+                autoFeed = dataRepo.autoFeed,
+                autoReloadPositions = dataRepo.autoReloadPositions,
+                smallTrendPercent = dataRepo.smallTrendPercent,
+                highTrendPercent = dataRepo.highTrendPercent
+
+            ),
             mutator = { action ->
                 when (action) {
                     is Action.LoadAndUpdateFeedFTToClockItems -> flow {
                         try {
                             emit(Mutation.ErrorChanged(null))
-                            Timber.tag("wims").i("before")
                             dataRepo.loadAndUpdateFeedFTToClockItems()
-                            Timber.tag("wims").i("after")
+                            dataRepo.loadAndUpdateFeedNFTToClockItems()
                             val updated = dataRepo.getAllFeedToClockItems()
-                            Timber.tag("wims").i("after updated ${updated.size}")
                             emit(Mutation.FeedToClockItemsChanged(updated))
                         } catch (e: Exception) {
-                            emit(Mutation.ErrorChanged("could not load and update FeedFTToClock"))
+                            emit(Mutation.ErrorChanged("could not load and update FeedToClock items"))
                             Timber.d("could not load Positions $e")
                         }
                     }
+
                     is Action.LoadAndUpdateFeedNFTToClockItems -> flow {
                         try {
-                            Timber.tag("wims").i("LoadAndUpdateFeedNFTToClockItems")
                             emit(Mutation.ErrorChanged(null))
                             dataRepo.loadAndUpdateFeedNFTToClockItems()
                             val updated = dataRepo.getAllFeedToClockItems()
@@ -66,6 +82,7 @@ class SettingsViewModel(
                             Timber.d("could not load Positions $e")
                         }
                     }
+
                     is Action.StartClockFeedCycler -> flow {
                         try {
                             emit(Mutation.ErrorChanged(null))
@@ -76,6 +93,7 @@ class SettingsViewModel(
                             Timber.d("could not start Cycling $e")
                         }
                     }
+
                     is Action.PauseClockFeedCycler -> flow {
                         try {
                             emit(Mutation.ErrorChanged(null))
@@ -86,12 +104,35 @@ class SettingsViewModel(
                             Timber.d("could not pause Cycling $e")
                         }
                     }
+
+                    is Action.AutoFeedChanged -> flow {
+                        dataRepo.setAutoFeed(action.bool)
+                        emit(Mutation.AutoFeedChanged(action.bool))
+                    }
+
+                    is Action.AutoReloadPositionsChanged -> flow {
+                        dataRepo.setAutoReloadPositions(action.bool)
+                        emit(Mutation.AutoReloadPositionsChanged(action.bool))
+                    }
+
+                    is Action.HighTrendChanged -> flow {
+                        dataRepo.setHighTrendPercent(action.percent)
+                        emit(Mutation.HighTrendChanged(action.percent))
+                    }
+                    is Action.SmallTrendChanged -> flow {
+                        dataRepo.setSmallTrendPercent(action.percent)
+                        emit(Mutation.SmallTrendChanged(action.percent))
+                    }
                 }
             },
             reducer = { mutation, previousState ->
                 when (mutation) {
                     is Mutation.FeedToClockItemsChanged -> previousState.copy(feedToClockItems = mutation.items)
                     is Mutation.ErrorChanged -> previousState.copy(error = mutation.errorMessage)
+                    is Mutation.AutoFeedChanged -> previousState.copy(autoFeed = mutation.bool)
+                    is Mutation.AutoReloadPositionsChanged -> previousState.copy(autoReloadPositions = mutation.bool)
+                    is Mutation.HighTrendChanged -> previousState.copy(highTrendPercent = mutation.percent)
+                    is Mutation.SmallTrendChanged -> previousState.copy(smallTrendPercent = mutation.percent)
                 }
             }
         )

@@ -42,6 +42,8 @@ class FeedCycler(
                                 dataRepo.moveFeedToClockItemToTheEnd(item)
                             }
                             currentDelay = defaultCycleTime
+                            // for the next item, see if we need to update with price and colorMode on trend
+                            dataRepo.loadAndUpdateNextFeedToClockItem()
                         } else {
                             currentDelay = retryDelay
                         }
