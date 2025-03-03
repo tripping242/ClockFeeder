@@ -116,7 +116,7 @@ fun SettingsScreen(
                     text = "Percentage of change needed for default light animation on feed to BlockClock:",
                     amount = smallTrendPercent,
                     onAmountChanged = { newAmount ->
-                        newAmount?.let  {
+                        newAmount?.let {
                             smallTrendPercent = newAmount
                         }
                     },
@@ -127,7 +127,7 @@ fun SettingsScreen(
                     text = "Percentage of change needed for double light animation on feed to BlockClock:",
                     amount = highTrendPercent,
                     onAmountChanged = { newAmount ->
-                        newAmount?.let  {
+                        newAmount?.let {
                             highTrendPercent = newAmount
                         }
                     },
@@ -139,16 +139,24 @@ fun SettingsScreen(
                         modifier = Modifier
                             .align(Alignment.CenterHorizontally),
                         onClick = {
-                            viewModel.dispatch(SettingsViewModel.Action.SmallTrendChanged(smallTrendPercent))
-                            viewModel.dispatch(SettingsViewModel.Action.HighTrendChanged(highTrendPercent))
+                            viewModel.dispatch(
+                                SettingsViewModel.Action.SmallTrendChanged(
+                                    smallTrendPercent
+                                )
+                            )
+                            viewModel.dispatch(
+                                SettingsViewModel.Action.HighTrendChanged(
+                                    highTrendPercent
+                                )
+                            )
                         },
                     ) {
-                        Text(text = "SAVE TREND PRECENTAGE CHANGES")
+                        Text(text = "SAVE TREND PERCENTAGE CHANGES")
                     }
                 }
             }
 
-            Text(text = "Advanced Settings:" )
+            Text(text = "Advanced Settings:")
             CheckBoxRowWithText(
                 text = "show advanced settings",
                 onCheckedChanged = {
@@ -215,18 +223,16 @@ fun FeedToClock(item: FeedToClockItem) {
     ) {
         Text(
             text = item.name,
-            modifier = Modifier.width(100.dp), // Adjust width as needed
+            modifier = Modifier.width(120.dp),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
 
-        Row(
-            modifier = Modifier.width(120.dp), // Adjust width as needed
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            item.price?.let { Text(text = it.formatMax8decimals(), modifier = Modifier.weight(1f)) }
-            Text(text = item.feedType.name, modifier = Modifier
-                .padding(start = 4.dp).weight(1f))
-        }
+        item.price?.let { Text(text = it.formatMax8decimals(), modifier = Modifier) }
+        Text(
+            text = item.feedType.name,
+            modifier = Modifier
+                .padding(start = 4.dp)
+        )
     }
 }

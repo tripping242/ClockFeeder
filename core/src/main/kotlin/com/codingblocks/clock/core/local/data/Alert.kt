@@ -21,7 +21,7 @@ import java.time.ZonedDateTime
 data class CustomFTAlert(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val feedPositionUnit: String, // References FeedFT.positionUnit
+    val feedPositionUnit: String,
     var ticker: String,
     var threshold: Double,
     var isEnabled: Boolean,
@@ -50,7 +50,7 @@ data class CustomFTAlert(
 data class CustomNFTAlert(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val feedPositionPolicy: String, // References FeedNFT.positionPolicy
+    val feedPositionPolicy: String,
     var ticker: String,
     var threshold: Double,
     var isEnabled: Boolean,

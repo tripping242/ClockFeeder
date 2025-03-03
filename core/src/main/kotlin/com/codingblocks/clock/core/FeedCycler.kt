@@ -79,7 +79,7 @@ class FeedCycler(
 
     fun stopCycling() {
         isCycling = false
-        scope.cancel() // Cancel the coroutine scope when no longer needed
+        scope.cancel()
     }
 
     private suspend fun processItem(item: FeedToClockItem) : Pair<Boolean, Long> {
@@ -138,7 +138,7 @@ class FeedCycler(
     }
 
     fun splitAndFormatName(name: String): List<Triple<Int, String, String>> {
-        val words = name.split(" ") // Split by spaces
+        val words = name.split(" ")
         val formattedTexts = mutableListOf<Triple<Int, String, String>>()
 
         val overTexts = mutableListOf<String>()
@@ -152,9 +152,9 @@ class FeedCycler(
                 val chunk = word.substring(index, minOf(index + 4, word.length))
 
                 if (position < 6) {
-                    overTexts.add(chunk) // Fill over first (positions 0-5)
+                    overTexts.add(chunk)
                 } else {
-                    underTexts.add(chunk) // If over is full, start under
+                    underTexts.add(chunk)
                 }
 
                 index += 4
@@ -178,22 +178,22 @@ fun formatPrice(input: String): String {
     // Detect and clean up input format
     val cleaned = input.replace(" ", "")
     val normalized = if (cleaned.count { it == ',' } > 1 || (cleaned.contains('.') && cleaned.contains(','))) {
-        cleaned.replace(",", "") // Assume comma is a thousand separator, remove it
+        cleaned.replace(",", "")
     } else {
-        cleaned.replace(',', '.') // Assume comma is decimal separator
+        cleaned.replace(',', '.')
     }
 
     // Parse to a Double
     val number = normalized.toDoubleOrNull() ?: return "ERROR"
 
     val price = when {
-        number >= 100000 -> number.toLong().toString() // No decimal for 6-digit numbers
+        number >= 100000 -> number.toLong().toString()
         number >= 10000 ->
-            if (number % 1.0 == 0.0) number.toLong().toString() else String.format(Locale.US, "%.1f", number) // Round to whole number
-        number % 1.0 == 0.0 -> number.toLong().toString() // Remove .0 for whole numbers
-        number >= 1 -> number.toString().take(7) // Keep max possible decimals within 7 positions
-        number >= 0.0001 -> DecimalFormat("0.######", DecimalFormatSymbols(Locale.US)).format(number).take(7) // Small decimals
-        else -> DecimalFormat("0.00E0").format(number).take(8) // Use scientific notation
+            if (number % 1.0 == 0.0) number.toLong().toString() else String.format(Locale.US, "%.1f", number)
+        number % 1.0 == 0.0 -> number.toLong().toString()
+        number >= 1 -> number.toString().take(7)
+        number >= 0.0001 -> DecimalFormat("0.######", DecimalFormatSymbols(Locale.US)).format(number).take(7)
+        else -> DecimalFormat("0.00E0").format(number).take(8)
     }
     return price
 }
@@ -201,20 +201,20 @@ fun formatPrice(input: String): String {
 @SuppressLint("DefaultLocale")
 fun formatNFTPriceFromDouble(price: Double): String {
     return when {
-        price < 100_000 -> price.toString() // Keep as is if ≤ 5 digits
-        price < 1_000_000 -> String.format("%.1fk", price / 1_000.0).take(5) // Shorten to 5 chars max
-        else -> String.format("%.1fm", price / 1_000_000.0).take(5) // Shorten to 5 chars max
+        price < 100_000 -> price.toString()
+        price < 1_000_000 -> String.format("%.1fk", price / 1_000.0).take(5)
+        else -> String.format("%.1fm", price / 1_000_000.0).take(5)
     }
 }
 
 @SuppressLint("DefaultLocale")
 fun formatPrice5Digits(price: Double): String {
     return when {
-        price >= 100_000 -> String.format("%.1fk", price / 1_000).take(5) // 123456 → "123k"
-        price >= 1_000 -> String.format("%.0f", price).take(5) // 4521 → "4521"
-        price >= 1.0 -> String.format("%.2f", price).take(5) // 12.34 → "12.34"
-        price >= 0.001 -> String.format("%.4f", price).trimEnd('0').take(5) // 0.012345 → "0.012"
-        else -> DecimalFormat("0.0E0").format(price).take(5) // Use scientific notation
+        price >= 100_000 -> String.format("%.1fk", price / 1_000).take(5)
+        price >= 1_000 -> String.format("%.0f", price).take(5)
+        price >= 1.0 -> String.format("%.2f", price).take(5)
+        price >= 0.001 -> String.format("%.4f", price).trimEnd('0').take(5)
+        else -> DecimalFormat("0.0E0").format(price).take(5)
     }
 }
 

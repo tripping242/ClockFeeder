@@ -7,14 +7,14 @@ fun priceNotTooOld(createdTimeStamp: Long, tooOldSeconds: Int) {}
 @SuppressLint("DefaultLocale")
 fun formatNFTPrice(price: Int): String {
     return when {
-        price < 100_000 -> price.toString() // Keep as is if ≤ 5 digits
-        price < 1_000_000 -> String.format("%.1fk", price / 1_000.0).take(5) // Shorten to 5 chars max
-        else -> String.format("%.1fm", price / 1_000_000.0).take(5) // Shorten to 5 chars max
+        price < 100_000 -> price.toString()
+        price < 1_000_000 -> String.format("%.1fk", price / 1_000.0).take(5)
+        else -> String.format("%.1fm", price / 1_000_000.0).take(5)
     }
 }
 
 fun splitAndFormatName(name: String): List<Triple<Int, String, String>> {
-    val words = name.split(" ") // Split by spaces
+    val words = name.split(" ")
     val formattedTexts = mutableListOf<Triple<Int, String, String>>()
 
     val overTexts = mutableListOf<String>()
@@ -28,9 +28,9 @@ fun splitAndFormatName(name: String): List<Triple<Int, String, String>> {
             val chunk = word.substring(index, minOf(index + 4, word.length))
 
             if (position < 6) {
-                overTexts.add(chunk) // Fill over first (positions 0-5)
+                overTexts.add(chunk)
             } else {
-                underTexts.add(chunk) // If over is full, start under
+                underTexts.add(chunk)
             }
 
             index += 4
@@ -49,7 +49,7 @@ fun splitAndFormatName(name: String): List<Triple<Int, String, String>> {
 }
 
 fun splitAndFormatPrices(crossedPrice: String, reachedPrice: String): List<Triple<Int, String, String>> {
-    val mid = reachedPrice.length / 2  // Middle index
+    val mid = reachedPrice.length / 2
 
     val reachedFirst = reachedPrice.substring(0, mid)
     val reachedSecond = reachedPrice.substring(mid)
@@ -64,7 +64,7 @@ fun splitAndFormatPrices(crossedPrice: String, reachedPrice: String): List<Tripl
 }
 
 fun splitAndFormatNameAlertFirst3Positions(name: String): List<Triple<Int, String, String>> {
-    val words = name.split(" ") // Split by spaces
+    val words = name.split(" ")
     val formattedTexts = mutableListOf<Triple<Int, String, String>>()
 
     val overTexts = mutableListOf<String>()
@@ -78,9 +78,9 @@ fun splitAndFormatNameAlertFirst3Positions(name: String): List<Triple<Int, Strin
             val chunk = word.substring(index, minOf(index + 4, word.length))
 
             if (position < 3) {
-                overTexts.add(chunk) // Fill over first (positions 0-2)
+                overTexts.add(chunk)
             } else {
-                underTexts.add(chunk) // If over is full, start under
+                underTexts.add(chunk)
             }
 
             index += 4

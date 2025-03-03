@@ -85,11 +85,11 @@ fun FeedsScreen(
 
     var expandedItemIndex by remember { mutableStateOf(-1) }
     LaunchedEffect(expandedItemIndex) {
-        if (expandedItemIndex != -1) parentLazyListState.animateScrollToItem(expandedItemIndex) // Smooth scroll to the item
+        if (expandedItemIndex != -1) parentLazyListState.animateScrollToItem(expandedItemIndex)
     }
     var expandedItemIndex2 by remember { mutableStateOf(-1) }
     LaunchedEffect(expandedItemIndex2) {
-        if (expandedItemIndex2 != -1) parentLazyListState2.animateScrollToItem(expandedItemIndex2) // Smooth scroll to the item
+        if (expandedItemIndex2 != -1) parentLazyListState2.animateScrollToItem(expandedItemIndex2)
     }
     LaunchedEffect(viewModel) {
         viewModel.dispatch(FeedsViewModel.Action.Initialize)
@@ -123,7 +123,7 @@ fun FeedsScreen(
                         horizontalArrangement = Arrangement.Center,
                     ) {
                         if (showType == ShowType.FT) AppIcon(icon = Icons.Outlined.Check)
-                        Text(text = " FT")
+                        Text(text = "CNT")
                     }
 
                 }
@@ -163,7 +163,6 @@ fun FeedsScreen(
                                 if (expandedItemIndex != index) {
                                     expandedItemIndex = index
                                 } else {
-                                    // Toggle off if clicked again
                                     expandedItemIndex = -1
                                 }
                             },
@@ -222,7 +221,6 @@ fun FeedsScreen(
                                 if (expandedItemIndex2 != index) {
                                     expandedItemIndex2 = index
                                 } else {
-                                    // Toggle off if clicked again
                                     expandedItemIndex2 = -1
                                 }
                             },

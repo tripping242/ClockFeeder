@@ -15,7 +15,7 @@ import java.util.Locale
             entity = WatchListConfig::class,
             parentColumns = ["watchlistNumber"],
             childColumns = ["watchList"],
-            onDelete = ForeignKey.CASCADE // Optional: Cascade delete if watchlist is deleted
+            onDelete = ForeignKey.CASCADE
         )
     ],
     indices = [Index(value = ["watchList"])]

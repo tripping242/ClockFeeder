@@ -344,8 +344,8 @@ class CoreDataRepo(
     // use this from settings
     fun updateFetchDelay(newDelay: Long) {
         fetchDelay = newDelay
-        cancelPeriodicFetching() // Cancel the existing work
-        schedulePeriodicFetching() // Reschedule with the new delay
+        cancelPeriodicFetching()
+        schedulePeriodicFetching()
     }
 
     override val logoCache = LruCache<String, Bitmap>(200)
@@ -594,7 +594,6 @@ class CoreDataRepo(
     }
 
     override suspend fun getLPPositionByUnit(unit: String, watchList: Int): PositionLPLocal? {
-        // so we jsut take the position with highest adaValue here, in case we are sorting?
         return positionsDao.getLPPositionsByUnit(unit, watchList).sortedByDescending { it.adaValue }
             .firstOrNull()
     }
@@ -605,7 +604,7 @@ class CoreDataRepo(
 
     override suspend fun addFeedFT(feedFT: FeedFT): Boolean {
         val result = feedFTDao.insert(feedFT)
-        return result != -1L // Returns true if insertion was successful, false if a conflict occurred
+        return result != -1L
     }
 
     override suspend fun updateFeedFT(feedFT: FeedFT) {
@@ -626,7 +625,7 @@ class CoreDataRepo(
 
     override suspend fun addFeedNFT(feedNFT: FeedNFT): Boolean {
         val result = feedNFTDao.insert(feedNFT)
-        return result != -1L // Returns true if insertion was successful, false if a conflict occurred
+        return result != -1L
     }
 
     override suspend fun updateFeedNFT(feedNFT: FeedNFT) {
@@ -666,7 +665,6 @@ class CoreDataRepo(
     }
 
     override suspend fun deleteAlertsForFeedWithUnit(feedFT: FeedFT) {
-        // todo check
         //customFTAlertDao.deleteAlertsForFeed(it) }
     }
 
@@ -891,11 +889,10 @@ class CoreDataRepo(
 
                 val colorMode = when {
                     percentageChange == null -> null
-                    // todo et these limits manually in settings?
-                    percentageChange > 5.0 -> ColorMode.BlinkUpMuch
-                    percentageChange > 0.1 -> ColorMode.BlinkUp
-                    percentageChange < -5.0 -> ColorMode.BlinkDownMuch
-                    percentageChange < -0.1 -> ColorMode.BlinkDown
+                    percentageChange > highTrendPercent -> ColorMode.BlinkUpMuch
+                    percentageChange > smallTrendPercent -> ColorMode.BlinkUp
+                    percentageChange < -highTrendPercent -> ColorMode.BlinkDownMuch
+                    percentageChange < -smallTrendPercent -> ColorMode.BlinkDown
                     else -> ColorMode.BlinkOnce
                 }
                 val existingFeedTheClockItem = feedTheclockDao.getByUnit(item.positionUnit)
@@ -1026,7 +1023,6 @@ class CoreDataRepo(
         }
     }
 
-    // todo load this in worker??
     override suspend fun loadAndUpdateFeedNFTToClockItems() {
         val validTime =
             System.currentTimeMillis() - (settingsManager.settings.priceTooOldSeconds * 1000)
@@ -1061,10 +1057,10 @@ class CoreDataRepo(
                 val colorMode = when {
                     percentageChange == null -> null
                     // todo et these limits manually in settings?
-                    percentageChange > 5.0 -> ColorMode.BlinkUpMuch
-                    percentageChange > 0.1 -> ColorMode.BlinkUp
-                    percentageChange < -5.0 -> ColorMode.BlinkDownMuch
-                    percentageChange < -0.1 -> ColorMode.BlinkDown
+                    percentageChange > highTrendPercent -> ColorMode.BlinkUpMuch
+                    percentageChange > smallTrendPercent -> ColorMode.BlinkUp
+                    percentageChange < -highTrendPercent -> ColorMode.BlinkDownMuch
+                    percentageChange < -smallTrendPercent -> ColorMode.BlinkDown
                     else -> ColorMode.BlinkOnce
                 }
 
@@ -1205,11 +1201,11 @@ fun PositionsFt.toPositionFT(watchList: Int, logo: String?): PositionFTLocal {
         ticker = this.ticker,
         fingerprint = this.fingerprint,
         adaValue = this.adaValue,
-        price = this.price ?: 1.0, // Handle null price
+        price = this.price ?: 1.0,
         unit = this.unit,
         balance = this.balance,
         change30D = this.change30D,
-        showInFeed = false,  // Default value, adjust if needed
+        showInFeed = false,
         watchList = watchList,
         createdAt = ZonedDateTime.now(),
         lastUpdated = ZonedDateTime.now()
@@ -1225,7 +1221,7 @@ fun PositionsNft.toPositionNFT(watchList: Int, logo: String?): PositionNFTLocal 
         price = this.floorPrice,
         balance = this.balance,
         change30D = this.change30D,
-        showInFeed = false,  // Default value, adjust if needed
+        showInFeed = false,
         watchList = watchList,
         createdAt = ZonedDateTime.now(),
         lastUpdated = ZonedDateTime.now()
@@ -1259,11 +1255,11 @@ fun PositionLPLocal.tokenAToPositionFT(watchList: Int): PositionFTLocal {
         ticker = lp.tokenAName,
         fingerprint = "",
         adaValue = lp.adaValue / 2,
-        price = -1.0, // Handle null price
+        price = -1.0,
         unit = lp.tokenA,
         balance = lp.tokenAAmount,
         change30D = 0.0,
-        showInFeed = lp.showInFeedA || lp.showInFeedB,  // Default value, adjust if needed
+        showInFeed = lp.showInFeedA || lp.showInFeedB,
         watchList = watchList,
         createdAt = ZonedDateTime.now(),
         lastUpdated = ZonedDateTime.now()

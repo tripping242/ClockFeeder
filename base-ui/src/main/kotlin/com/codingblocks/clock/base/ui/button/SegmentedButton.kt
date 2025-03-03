@@ -76,11 +76,11 @@ fun MultiChoiceTwoSegmentedButton(
                 onCheckedChange = {
                     val newSelection = selectedOptions.toMutableSet()
                     if (isChecked) {
-                        newSelection.remove(index)  // Deselect
+                        newSelection.remove(index)
                     } else {
-                        newSelection.add(index)  // Select
+                        newSelection.add(index)
                     }
-                    onSelectionChange(newSelection)  // Update state
+                    onSelectionChange(newSelection)
                 },
                 icon = { SegmentedButtonDefaults.Icon(isChecked) },
                 label = { Text(label) },

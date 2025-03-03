@@ -93,7 +93,7 @@ fun WatchlistsScreen(
     var expandedItemIndex by remember { mutableStateOf(-1) }
 
     LaunchedEffect(expandedItemIndex) {
-        if (expandedItemIndex != -1) parentLazyListState.animateScrollToItem(expandedItemIndex) // Smooth scroll to the item
+        if (expandedItemIndex != -1) parentLazyListState.animateScrollToItem(expandedItemIndex)
     }
 
     AppScaffold(
@@ -369,7 +369,7 @@ fun ExpandableItem(
                             horizontalArrangement = Arrangement.Center,
                         ) {
                             if (showType == ShowType.FT || (currentWatchListWithPositions.watchListConfig.includeLPinFT && showType == ShowType.FT_LP)) AppIcon(icon = Icons.Outlined.Check)
-                            Text(text = " FT")
+                            Text(text = "CNT")
                         }
                     }
                     if (currentWatchListWithPositions.watchListConfig.includeNFT) {

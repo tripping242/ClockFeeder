@@ -31,7 +31,7 @@ interface PositionsDao {
     @Transaction
     fun insertOrUpdateFT(positionFTLocal: PositionFTLocal) {
         val id = insertFT(positionFTLocal)
-        if (id == -1L) { // Insert failed, so update the existing entry
+        if (id == -1L) {
             updateExistingFT(
                 positionFTLocal.logo,
                 positionFTLocal.unit,
@@ -74,7 +74,7 @@ interface PositionsDao {
     @Transaction
     fun insertOrUpdateNFT(positionNFTLocal: PositionNFTLocal) {
         val id = insertNFT(positionNFTLocal)
-        if (id == -1L) { // Insert failed, so update the existing entry
+        if (id == -1L) {
             updateExistingNFT(
                 positionNFTLocal.logo,
                 positionNFTLocal.policy,
@@ -121,7 +121,7 @@ interface PositionsDao {
     @Transaction
     fun insertOrUpdateLP(positionLPLocal: PositionLPLocal) {
         val id = insertLP(positionLPLocal)
-        if (id == -1L) { // Insert failed, so update the existing entry
+        if (id == -1L) {
             updateExistingLP(
                 positionLPLocal.ticker,
                 positionLPLocal.adaValue,

@@ -59,7 +59,6 @@ class TapToolsManagerImpl private constructor(
 
     private val database by lazy { TapToolsDatabase(context) }
 
-    // todo settings to set the apiToken, when set, call updateApiKey
     private var api: TapToolsApi? = provideApi("eOSYRNQmimLJg0OXUGcq3Pf2KP0Bvc88")
 
     override fun updateApiKey(key: String?) {
