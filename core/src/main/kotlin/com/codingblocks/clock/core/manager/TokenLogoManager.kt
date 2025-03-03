@@ -54,7 +54,6 @@ class LogoManagerImpl private constructor(
         getTokenLogo(unit)
     }
         .mapCatching { response ->
-            Timber.tag("wims").i("received subject ${response.logo.value}")
             response.logo.value
         }
         .recoverCatching { throwable ->

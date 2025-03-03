@@ -252,10 +252,10 @@ class CoreDataRepo(
     private val tokenLogoDao = database.getTokenLogoDao()
     private val nftLogoDao = database.getNFTLogoDao()
 
-    var fetchDelay: Long = 1 // todo move to settings
+    var fetchDelay: Long = 1
 
     override fun schedulePeriodicFetching() {
-        Timber.tag("wims").i("schedulePeriodicFetching")
+        Timber.i("schedulePeriodicFetching")
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
@@ -284,7 +284,7 @@ class CoreDataRepo(
     }
 
     override fun scheduleNFTAlertWorker() {
-        Timber.tag("wims").i("scheduleNFTAlertWorker")
+        Timber.i("scheduleNFTAlertWorker")
 
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -309,7 +309,7 @@ class CoreDataRepo(
     }
 
     override fun scheduleFTAlertWorker() {
-        Timber.tag("wims").i("scheduleFTAlertWorker")
+        Timber.i("scheduleFTAlertWorker")
 
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -374,7 +374,6 @@ class CoreDataRepo(
     }
 
     private fun provideTokenLogoManager(): LogoManager {
-        Timber.tag("wims").i("provideTokenLogoManager   ! with ${appBuildInfo.tokenCardanoBaseUrl}")
         return LogoManagerImpl.Builder(
             context, LogoConfig(appBuildInfo.tokenCardanoBaseUrl)
         ).setOkHttpClient(okHttpClient).build()
@@ -557,7 +556,6 @@ class CoreDataRepo(
     }
 
     override suspend fun updatePosition(position: PositionFTLocal) {
-        Timber.tag("wims").i("update Position ${position.unit} ${position.showInFeed}\"")
         positionsDao.insertOrUpdateFT(position)
     }
 
@@ -690,18 +688,11 @@ class CoreDataRepo(
 
                 // Process each alert
                 alerts.forEach { alert ->
-                    Timber.tag("wims").i("check for alert: ${alert.ticker} ${alert.threshold} and priceOrVolume ${alert.priceOrVolume}")
-
                     // Fetch the latest two stats entries for the policy
                     val stats = getLatest2PricesForUnit(alert.feedPositionUnit)
-                    Timber.tag("wims").i("prices.size == ${stats.size}")
                     if (stats.size == 2) {
-
                         val previousStat = stats[1]
                         val currentStat = stats[0]
-
-                        Timber.tag("wims").i("previous price ${previousStat.price} treshold ${alert.threshold} current ${currentStat.price}")
-                        // Check if the alert condition is met
                         val conditionMet = if (alert.priceOrVolume) {
                             checkIfNotAlreadyTriggeredByThesePrices(alert.lastTriggeredTimeStamp, previousStat.timestamp)
                                     && checkPriceCrossing(alert.crossingOver, alert.threshold, previousStat.price, currentStat.price)
@@ -715,7 +706,6 @@ class CoreDataRepo(
                             if (alert.onlyOnce) {
                                 deleteAlert(alert)
                             } else {
-                                // update alert with lastAlerted Timestamp
                                 setLastTriggered(alert)
                             }
                         }
@@ -728,10 +718,6 @@ class CoreDataRepo(
     }
 
     override suspend fun getAndStoreRemoteLogo(unit: String) {
-        // todo load from website
-        // val bitmap = get from remote base64,
-        // then decodeBase64ToBitmap, store in TokenLogo + put in memórycache
-        //memoryCache.put(policy,bitmap)
     }
 
     override suspend fun getLocalLogo(unit: String): Bitmap? {
@@ -815,7 +801,7 @@ class CoreDataRepo(
 
     override suspend fun getAndStorePricesForTokens() {
         withContext(Dispatchers.IO) {
-            Timber.tag("wims").i("retrieving token price info")
+            Timber.i("retrieving token price info")
             try {
                 val unitList = feedFTDao.getAllFTUnitsFromFeed()
                 tapToolsManager.getPricesForTokens(unitList)
@@ -840,14 +826,12 @@ class CoreDataRepo(
 
     override suspend fun getAndStorePricesForPolicies() {
         withContext(Dispatchers.IO) {
-            Timber.tag("wims").i("retrieving NFT price info")
+            Timber.i("retrieving NFT price info")
             val policies = feedNFTDao.getAllNFTPoliciesFromFeed()
             policies.forEach { policy ->
                 try {
                     tapToolsManager.getStatsForPolicy(policy)
                         .onSuccess { result ->
-                            // Convert the response to an entity and store it in the database
-                            Timber.tag("wims").i("adding NFTStatsEntity for $policy")
                             val nftStatsEntity = NFTStatsEntity(
                                 policy = policy,
                                 listings = result.listings,
@@ -950,7 +934,6 @@ class CoreDataRepo(
                 feedNFTDao.getAllFeedNFTClockEnabled().find {
                     it.positionPolicy == nextFeedToclock.unit
                 }?.let { item ->
-                    Timber.tag("wims").i("FeedNFTToClock item $item}")
                     val latestPrice =
                         nftStatsDao.getLatestValidPricesForPolicy(item.positionPolicy, validTime, 1)
                             ?.getOrNull(0)?.price
@@ -968,7 +951,6 @@ class CoreDataRepo(
                                 } catch (e: Exception) {
                                     null
                                 }
-                            Timber.tag("wims").i("          has previousPrice: $previousPrice")
 
                             percentageChange = if (previousPrice != null && previousPrice != 0.0) {
                                 ((latestPrice - previousPrice) / previousPrice) * 100
@@ -997,7 +979,6 @@ class CoreDataRepo(
                 feedFTDao.getAllFeedFTClockEnabled().find {
                     it.positionUnit == nextFeedToclock.unit
                 }?.let { item ->
-                    Timber.tag("wims").i("FeedFTToClock item $item}")
                     val latestPrice =
                         ftPriceDao.getLatestValidPricesForUnit(item.positionUnit, validTime, 1)
                             ?.getOrNull(0)?.price
@@ -1015,7 +996,6 @@ class CoreDataRepo(
                                 } catch (e: Exception) {
                                     null
                                 }
-                            Timber.tag("wims").i("          has previousPrice: $previousPrice")
 
                             percentageChange = if (previousPrice != null && previousPrice != 0.0) {
                                 ((latestPrice - previousPrice) / previousPrice) * 100
@@ -1053,7 +1033,6 @@ class CoreDataRepo(
         val previousValidTime =
             System.currentTimeMillis() - (3 * settingsManager.settings.priceTooOldSeconds * 1000)
         feedNFTDao.getAllFeedNFTClockEnabled().forEach { item ->
-            Timber.tag("wims").i("FeedNFTToClock item $item}")
             val latestPrice =
                 nftStatsDao.getLatestValidPricesForPolicy(item.positionPolicy, validTime, 1)
                     ?.getOrNull(0)?.price
@@ -1071,7 +1050,6 @@ class CoreDataRepo(
                         } catch (e: Exception) {
                             null
                         }
-                    Timber.tag("wims").i("          has previousPrice: $previousPrice")
 
                     percentageChange = if (previousPrice != null && previousPrice != 0.0) {
                         ((latestPrice - previousPrice) / previousPrice) * 100
@@ -1116,7 +1094,7 @@ class CoreDataRepo(
     }
 
     override suspend fun addAlertFTToFeedToClockItems(alert: CustomFTAlert, reachedPrice: Double) {
-        Timber.tag("wims").i("ALERT being added to front of the Clock feed $alert")
+        Timber.i("FT ALERT being added to front of the Clock feed $alert")
         val feedToClockItem = FeedToClockItem(
             unit = alert.threshold.toString(),
             name = alert.ticker,
@@ -1133,7 +1111,7 @@ class CoreDataRepo(
         alert: CustomNFTAlert,
         reachedPrice: Double
     ) {
-        Timber.tag("wims").i("ALERT being added to front of the Clock feed $alert")
+        Timber.i("NFT ALERT being added to front of the Clock feed $alert")
         val feedToClockItem = FeedToClockItem(
             unit = alert.threshold.toString(),
             name = alert.ticker,
@@ -1209,7 +1187,7 @@ class CoreDataRepo(
     }
     private suspend fun triggerAlerts(alert: CustomFTAlert, currentStat: FTPriceEntity) {
         if (alert.pushAlert) {
-            Timber.tag("wims").i("push alert now for ${alert.ticker}")
+            Timber.i("push alert for ${alert.ticker}")
             pushFTAlert(alert, currentStat.price)
         }
         if (alert.clockAlert) {

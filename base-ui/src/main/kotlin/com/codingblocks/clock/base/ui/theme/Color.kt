@@ -2,7 +2,7 @@ package com.codingblocks.clock.base.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val md_theme_light_primary = Color(0xFF006686)
+val md_theme_light_primary = Color(0xFF0033ad)
 val md_theme_light_onPrimary = Color(0xFFFFFFFF)
 val md_theme_light_primaryContainer = Color(0xFFC0E8FF)
 val md_theme_light_onPrimaryContainer = Color(0xFF001E2B)
@@ -29,7 +29,7 @@ val md_theme_light_inverseOnSurface = Color(0xFFF0F1F3)
 val md_theme_light_inverseSurface = Color(0xFF2E3133)
 val md_theme_light_inversePrimary = Color(0xFF71D2FF)
 val md_theme_light_shadow = Color(0xFF000000)
-val md_theme_light_surfaceTint = Color(0xFF006686)
+val md_theme_light_surfaceTint = Color(0xFF0033ad)
 val md_theme_light_outlineVariant = Color(0xFFC0C7CD)
 val md_theme_light_scrim = Color(0xFF000000)
 
@@ -58,7 +58,7 @@ val md_theme_dark_onSurfaceVariant = Color(0xFFC0C7CD)
 val md_theme_dark_outline = Color(0xFF8A9297)
 val md_theme_dark_inverseOnSurface = Color(0xFF191C1E)
 val md_theme_dark_inverseSurface = Color(0xFFE1E2E5)
-val md_theme_dark_inversePrimary = Color(0xFF006686)
+val md_theme_dark_inversePrimary = Color(0xFF0033ad)
 val md_theme_dark_shadow = Color(0xFF000000)
 val md_theme_dark_surfaceTint = Color(0xFF71D2FF)
 val md_theme_dark_outlineVariant = Color(0xFF40484C)

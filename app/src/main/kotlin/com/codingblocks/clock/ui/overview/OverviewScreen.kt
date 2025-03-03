@@ -49,7 +49,8 @@ private fun OverviewView(title: String, isLoading: Boolean) {
         ) {
             Text(
                 text = "ClockFeeder",
-                style = AppTheme.typography.h4
+                style = AppTheme.typography.h4,
+                color = AppTheme.colors.primary
             )
             if (isLoading) {
                 Row(

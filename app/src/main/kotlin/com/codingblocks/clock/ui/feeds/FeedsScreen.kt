@@ -653,7 +653,7 @@ fun FeedFTItem(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier
-                        .padding(16.dp)
+                        .padding(horizontal = 16.dp)
                         .wrapContentHeight()
                         .fillMaxWidth(),
                 ) {
@@ -676,7 +676,7 @@ fun FeedFTItem(
 
                 CheckBoxRowWithText(
                     modifier = Modifier
-                        .padding(4.dp)
+                        .padding(horizontal = 4.dp)
                         .wrapContentHeight(),
                     text = "Show price feed on BlockClock",
                     onCheckedChanged = { onFeedClockPriceChanged.invoke() },
@@ -685,7 +685,7 @@ fun FeedFTItem(
 
                 CheckBoxRowWithText(
                     modifier = Modifier
-                        .padding(4.dp)
+                        .padding(horizontal = 4.dp)
                         .wrapContentHeight(),
                     enabled = item.feedFT.feedClockPrice,
                     text = "Indicate trend with lights",
@@ -759,7 +759,6 @@ fun NFTAlertItem(
 
         if (item.priceOrVolume) {
             AppIcon(icon = Icons.Outlined.WaterfallChart)
-            Timber.tag("wims").i("item.threshold ${item.threshold} formatted ${item.threshold.formatMax8decimals()}")
             Text(
                 text = item.threshold.formatMax8decimals()  + " ₳",
                 modifier = Modifier

@@ -28,7 +28,7 @@ class FeedCycler(
 
     fun startCycling(defaultCycleTime: Long) {
         isCycling = true
-        Timber.tag("wims").i("start cycling")
+        Timber.i("start cycling feed to clock")
         scope.launch {
             var currentDelay = defaultCycleTime
             while (true) {
@@ -83,7 +83,6 @@ class FeedCycler(
     }
 
     private suspend fun processItem(item: FeedToClockItem) : Pair<Boolean, Long> {
-        Timber.tag("wims").i("processItem ${item.feedType}")
         return when (item.feedType) {
             FeedType.FeedFT -> {
                 val encodedPrice = "/${formatPrice(item.price.toString())}"
@@ -91,7 +90,6 @@ class FeedCycler(
                 dataRepo.sendFTPriceFeed(encodedPrice, pair, item.colorMode)
                     .onFailure { throwable ->
                         if (throwable is ClockApiError.TooManyRequests) {
-                            Timber.tag("wims").i("we will wait for ${throwable.waitTime}")
                             Pair(false, throwable.waitTime.toLong())
                         } else {
                             // skip
