@@ -22,12 +22,16 @@ On starting the app, the Overview screen is started, which will start fetching d
 
 ## System Architecture
 
+### Data Flow
+
 All data flow is done via the core DataRepo.
 
 * The TapToolsManager is used to fetch wallet positions, prices for tokens, stats and logos for NFTs.
 * The BlockFrostManager helps resolve ada andles and checks validity of ada addresses.
 * The LogoManager gets token information from tokens.cardano.org to retrieve the token logo. 
 * The ClockManager communicates with the BlockClock.
+
+### Local Storage
 
 The room database stores all reusable data, using serveral Daos.
 
@@ -38,15 +42,19 @@ The room database stores all reusable data, using serveral Daos.
 * NFT Stats and Token price entries.
 * FeedTheClock entries with an ordered list of items to feed the BlockClock.
 
+### Automatic Data Fetching
+
 Real-time price and alert updates are done using workers. As these workers can run in the background, 
-they will keep running if the app is mved to the background. This ensures relevant price info is 
+they will keep running if the app is moved to the background. This ensures relevant price info is 
 available when we reopen the app.
 
 * FetchPricesWorker gets and stores prices for Tokens and NFTs, every 15 minutes.
 * AlertWorker loops through all enabled alerts and checks if the threshold target price was reached,
 * every 15 minutes.
 
-Running the feed to the BlockClock is done using a FeedCycler.The FeedCycler can be stoppen and 
+### Feeding the Clock
+
+Running the feed to the BlockClock is done using a FeedCycler.The FeedCycler can be stopped and 
 started from the settings screen. If auto feed cycle is activated, it will start on app start. It 
 pauses the BlockClocks normal feed. During FeedCycling we retrieve token prices more often than the 
 workers 15 minutes.
@@ -56,20 +64,20 @@ workers 15 minutes.
 * Get and stores prices for Tokens very 5 minutes! 
 
 ## BlockClock Api
-The BlockClock Api allows to send custom texts, over/under text, flash a white light, as well as set the 
-LED to a specific colour. As settings text triggers a 1 minute timeout before the next text can be 
-send, the FeedCycler was set to operate every one minute.
+The BlockClock Api allows to send custom texts, over/under text, flash a white light, as well as set the LED to a specific colour. As settings text triggers a 1 minute timeout before the next text can be send, the FeedCycler was set to operate every one minute.
 
 See [BLOCKCLOCK mini “Push” API](https://blockclockmini.com/api.html) for more info.
 
-* Formatting: We did a lot of text and price formatting to be able to use the available space of the
-* BlockClock display
+### Formatting:
 
-* Trend Light Modes: 
+A lot of text and price formatting is done to be able to use the available space of the BlockClock display.
+Especially long NFT names and prices in the 0.00000001 range had to be managed to be displayable.
+Thanks Hosky!
+
+### Trend Light Modes: 
 * Default Light Mode: Light up red/green, followed by a white flash
 * Double Light Mode: Light up red/green 3 times, followed by a white flash
 * Alert Light Mode: Light up blue, white flash, blue, white flash
-
 
 ## License
 
