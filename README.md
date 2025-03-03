@@ -1,95 +1,78 @@
 ### Table of Contents
+
 * [Technologies](#technologies)
-* [App structure](#app_structure)
-* [Predefined Modules](#predefined_structure)
-* [Module/Package structure](#module_structure)
-* [Testing](#testing)
-* [Other](#other)
-    * [Dependencies](#dependencies)
-        * [How to add a dependency](#adddependencies)
-    * [ktlint](#ktlint)
+* [App structure](#app-structure)
+* [System Architecture](#system-architecture)
+* [BlockClock Api](#blockclock-api)
 * [License](#license)
 
+## Technologies
 
-## Technologies <a name="technologies"></a>
 * Kotlin
 * Jetpack Compose
 * Koin for dependency injection
-* Retrofit/OkHttp/Gson for networking
+* Retrofit/OkHttp/Json for networking
 * Control (MVI) as architectural pattern
 * Room for local storage
 
-## App structure <a name="app_structure"></a>
-Features should be contained in a separate module. The `core` module should contain shared code, for example *api* or *database* classes that are needed in multiple feature modules. The `app` module contains Android app related (*ui*) code. Depending on the project size 
+## App Structure
 
-* each feature could be contained in a separated module to support and promote reusability, such as for example a `login` module or a `map` module. Each module then contains all the necessary code for the module to **live** on its own. For example a `login` module could contain the login *api*, the token storage *database* and the *views* containing the login user interface.
+The app has 3 main screens Watchlists, Feeds and Settings. 
+On starting the app, the Overview screen is started, which will start fetching data.
 
-* or all *ui* related elements are located in the `app` module in the according feature packages and the `core` module contains business logic that can potentially be shared with other feature or ui modules in future expansions of the application.
+## System Architecture
 
-Remember however: app and module structure should be thought through separately for every project.
+All data flow is done via the core DataRepo.
 
+* The TapToolsManager is used to fetch wallet positions, prices for tokens, stats and logos for NFTs.
+* The BlockFrostManager helps resolve ada andles and checks validity of ada addresses.
+* The LogoManager gets token information from tokens.cardano.org to retrieve the token logo. 
+* The ClockManager communicates with the BlockClock.
 
-## Predefined Modules <a name="predefined_structure"></a>
-Despite you and your *brain* being the judge of how the project should best be structured, at least **three** modules should be present:
+The room database stores all reusable data, using serveral Daos.
 
-1. `core`: A base Kotlin or Android module containing reusable (business logic) code; such as Api, Database or Repos.
-2. `base-ui`: A base Android module containing reusable UI components.
-3. `app`: An Android module containing the application.
+* Position info for tokens, NFTs and LP.
+* Watchlist with config and lists of above positions.
+* Feed entries for Tokens and NFTs, with a list of Alert entries.
+* Alert entries with alert details.
+* NFT Stats and Token price entries.
+* FeedTheClock entries with an ordered list of items to feed the BlockClock.
 
-When creating new modules, you should probably use (apply) one of the predefined library-module gradle files: `gradle/sample/android-module.gradle.kts` or `gradle/sample/kotlin-module.gradle.kts`.
+Real-time price and alert updates are done using workers. As these workers can run in the background, 
+they will keep running if the app is mved to the background. This ensures relevant price info is 
+available when we reopen the app.
 
+* FetchPricesWorker gets and stores prices for Tokens and NFTs, every 15 minutes.
+* AlertWorker loops through all enabled alerts and checks if the threshold target price was reached,
+* every 15 minutes.
 
-## Module/Package structure <a name="module_structure"></a>
-* Model classes should be located in a `model` package.
-* Network related classes and interfaces (e.g. networking api's) are located in a `remote` package.
-* Local storage related classes (e.g. databases or dao's) are located in a `local` package.
-* Classes that do not correspond to a certain feature, should either be located in an `all` package, an `util` package or at the top level of the module.
+Running the feed to the BlockClock is done using a FeedCycler.The FeedCycler can be stoppen and 
+started from the settings screen. If auto feed cycle is activated, it will start on app start. It 
+pauses the BlockClocks normal feed. During FeedCycling we retrieve token prices more often than the 
+workers 15 minutes.
 
-These rules can be applied to either whole *modules* or *packages* depending on if you have feature modules or feature packages. An example for such a module/package structure can be found [here](https://github.com/tailoredmedia/AndroidAppTemplateExample).
+* Every minute, get the next item to be fed to the clock.
+* When done, prepare the next item, by updating price and trend info from the available db price info.
+* Get and stores prices for Tokens very 5 minutes! 
 
+## BlockClock Api
+The BlockClock Api allows to send custom texts, over/under text, flash a white light, as well as set the 
+LED to a specific colour. As settings text triggers a 1 minute timeout before the next text can be 
+send, the FeedCycler was set to operate every one minute.
 
-## Testing <a name="testing"></a>
-Every module should contain tests for its use cases:
+See [BLOCKCLOCK mini “Push” API](https://blockclockmini.com/api.html) for more info.
 
-* `test`: Write unit tests for every `ViewModel` or `Service`/`Repository`. Mockito or PowerMock can be used to mock objects and verify correct behaviour.
-* `androidTest`: Write UI tests for common actions in your app. Use JUnit 4 Tests with Espresso. Some helper methods are available in EspressoUtils.
+* Formatting: We did a lot of text and price formatting to be able to use the available space of the
+* BlockClock display
 
-The dependencies for testing are located in the `gradle/test-dependencies-android.gradle` and `gradle/test-dependencies.gradle` files. If your `module` already implements `gradle/library-module-android.gradle` or `gradle/library-module.gradle`, then these dependencies are automatically added to the `module`.
-
-If your module does not implement these standard library gradle files, add the test dependencies with:
-
-``` groovy
-apply from: rootProject.file("gradle/XXX.gradle")
-```
-
-
-## Other <a name="other"></a>
-
-
-### Dependencies <a name="dependencies"></a>
-
-**All** dependencies are located in the `libs.versions.toml` file in the gradle folder and can be accessed in all modules.
-
-Checking whether new dependencies are available can be done by navigating to the `libs.versions.toml` file and checking the lint warnings or executing `./gradlew dependencyUpdates` (more infos can be found [here](https://github.com/ben-manes/gradle-versions-plugin#multi-project-build))
-
-
-#### How to add a Dependency <a name="adddependencies"></a>
-
-Insert the dependency in the `libs.versions.toml` file, perform a gradle sync and use the specified name in the `build.gradle.kts` file.
-
-> Underscores in `libs.versions.toml` are converted to dots: "androidx-core-ktx" -> "libs.androidx.core.ktx"
+* Trend Light Modes: 
+* Default Light Mode: Light up red/green, followed by a white flash
+* Double Light Mode: Light up red/green 3 times, followed by a white flash
+* Alert Light Mode: Light up blue, white flash, blue, white flash
 
 
-### ktlint <a name="ktlint"></a>
-[ktlint](https://ktlint.github.io/) is a *Kotlin* linter and formatter. Using it is required to keep the code base clean and readable.
+## License
 
-Use `./gradlew lintKotlin` to lint your code and `./gradlew formatKotlin` to format according to the specified lint rules
-
-Enable/disable rules in `.editorconfig`
-
-> ATTENTION: When you modify `.editorconfig` make sure to restart the gradle daemon (`./gradlew --stop`) otherwise the changes made to `.editorconfig` might not be applied. (More infos [here](https://github.com/jeremymailen/kotlinter-gradle/issues/336#issuecomment-1676235455))
-
-## License <a name="license"></a>
 ```
 Copyright 2024 Tailored Media GmbH.
 
