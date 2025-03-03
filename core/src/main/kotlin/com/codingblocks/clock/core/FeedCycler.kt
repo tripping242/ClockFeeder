@@ -193,7 +193,7 @@ fun formatPrice(input: String): String {
         number % 1.0 == 0.0 -> number.toLong().toString()
         number >= 1 -> number.toString().take(7)
         number >= 0.0001 -> DecimalFormat("0.######", DecimalFormatSymbols(Locale.US)).format(number).take(7)
-        else -> DecimalFormat("0.00E0").format(number).take(8)
+        else -> DecimalFormat("0.00E0", DecimalFormatSymbols(Locale.US)).format(number).take(8)
     }
     return price
 }

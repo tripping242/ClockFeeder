@@ -1123,14 +1123,14 @@ class CoreDataRepo(
     override suspend fun pushFTAlert(alert: CustomFTAlert, reachedPrice: Double) {
         notificationHelper.sendNotification(
             title = "Token price alert!",
-            message = "The price of ${alert.ticker} has crossed ${reachedPrice} ₳",
+            message = "The price of ${alert.ticker} has crossed ${alert.threshold} and has now reached ${reachedPrice} ₳",
         )
     }
 
     override suspend fun pushNFTAlert(alert: CustomNFTAlert, reachedPrice: Double) {
         notificationHelper.sendNotification(
             title = "NFT Price alert!",
-            message = "The floor price of ${alert.ticker} has crossed ${reachedPrice} ₳",
+            message = "The floor price of ${alert.ticker} has crossed ${alert.threshold} and has now reached ${reachedPrice} ₳",
         )
     }
 
