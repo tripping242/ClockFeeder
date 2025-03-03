@@ -170,7 +170,7 @@ fun SettingsScreen(
                             viewModel.dispatch(SettingsViewModel.Action.LoadAndUpdateFeedFTToClockItems)
                         },
                     ) {
-                        Text(text = "SHOW CURRENT FEED TO CLOCK POSITIONS")
+                        Text(text = "SHOW CURRENT FEED CLOCK POSITIONS")
                     }
                     Row(
                         modifier = Modifier
@@ -215,7 +215,7 @@ fun FeedToClock(item: FeedToClockItem) {
     ) {
         Text(
             text = item.name,
-            modifier = Modifier.width(120.dp), // Adjust width as needed
+            modifier = Modifier.width(100.dp), // Adjust width as needed
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -225,9 +225,8 @@ fun FeedToClock(item: FeedToClockItem) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             item.price?.let { Text(text = it.formatMax8decimals(), modifier = Modifier.weight(1f)) }
-            Text(text = item.feedType.name, modifier = Modifier.weight(1f))
+            Text(text = item.feedType.name, modifier = Modifier
+                .padding(start = 4.dp).weight(1f))
         }
-
-        Text(text = item.orderIndex.toString())
     }
 }

@@ -49,7 +49,7 @@ class OverviewViewModel(
             mutator = { action ->
                 when (action) {
                     Action.Initialize -> flow {
-
+                        emit(Mutation.IsLoadingChanged(true))
                         try {
                             if (dataRepo.autoReloadPositions) dataRepo.loadPositionsForAllWatchlists()
                             dataRepo.schedulePeriodicFetching()
@@ -59,6 +59,8 @@ class OverviewViewModel(
 
                         } catch (e: Exception) {
                             Timber.d("could not start workers feeds $e")
+                        } finally {
+                            emit(Mutation.IsLoadingChanged(false))
                         }
                     }
                 }
