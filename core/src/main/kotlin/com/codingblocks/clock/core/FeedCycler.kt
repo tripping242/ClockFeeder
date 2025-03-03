@@ -108,8 +108,8 @@ class FeedCycler(
                 item.price?.let {
                     dataRepo.sendFTPriceAlert(
                         item.name,
-                        formatPrice(item.price.toString()),
                         formatPrice(item.unit),
+                        formatPrice(item.price.toString()),
                         item.colorMode
                     )
                 }
@@ -119,8 +119,8 @@ class FeedCycler(
                 item.price?.let {
                     dataRepo.sendNFTPriceAlert(
                         item.name,
-                        formatNFTPrice(item.price.roundToInt()),
                         formatNFTPrice(item.unit.toDouble().roundToInt()),
+                        formatNFTPrice(item.price.roundToInt()),
                         item.colorMode
                     )
                 }
