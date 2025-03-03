@@ -23,8 +23,6 @@ import at.florianschuster.control.createController
 import com.codingblocks.clock.base.control.ControllerViewModel
 import com.codingblocks.clock.core.DataRepo
 import com.codingblocks.clock.core.FeedCycler
-import com.codingblocks.clock.ui.feeds.FeedsViewModel.Action
-import com.codingblocks.clock.ui.feeds.FeedsViewModel.Mutation
 import kotlinx.coroutines.flow.flow
 import timber.log.Timber
 

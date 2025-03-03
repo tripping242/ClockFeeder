@@ -38,7 +38,6 @@ import com.codingblocks.clock.base.ui.theme.md_theme_light_error
 import com.codingblocks.clock.base.ui.utils.formatMax8decimals
 import com.codingblocks.clock.core.local.data.FeedToClockItem
 import org.koin.androidx.compose.getViewModel
-import timber.log.Timber
 
 @Composable
 fun SettingsScreen(

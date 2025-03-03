@@ -90,8 +90,6 @@ class WatchListViewModel(
     override val controller: Controller<Action, State> =
         viewModelScope.createController<Action, Mutation, State>(
             initialState = State(
-                // todo get async as in
-                // employee = dataRepo.myProfile.current.getOrNull().asBasicEmployee!!
                 watchlistsWithPositions = dataRepo.watchlistsWithPositions,
                 logoCache = dataRepo.logoCache,
             ),
@@ -177,7 +175,6 @@ class WatchListViewModel(
                     }
 
                     is Action.GetAndUpdateLogos -> flow {
-                        Timber.tag("wims").i("GetAndUpdateLogos")
                         try {
                             val watchlistWithPositions =
                                 dataRepo.watchlistsWithPositions.find { it.watchListConfig.watchlistNumber == action.watchList }
@@ -191,7 +188,6 @@ class WatchListViewModel(
                                 watchList.positionsNFT.forEach {
                                     dataRepo.checkOrGetRemoteLogo(it)
                                 }
-                                // get all and set mutation
                                 val updatedWatchlistsWithPositions =
                                     dataRepo.watchlistsWithPositions
                                 emit(
@@ -263,7 +259,6 @@ class WatchListViewModel(
                     is Action.DeleteWatchList -> flow {
                         try {
                             dataRepo.deleteWatchlist(action.watchListNumber)
-                            Timber.tag("wims").i("deleted, now updating")
                             emit(Mutation.ShowLoading(true))
                             val updatedWatchlistsWithPositions =
                                 dataRepo.watchlistsWithPositions

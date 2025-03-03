@@ -25,26 +25,22 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-//import androidx.compose.foundation.layout.consumedWindowInsets
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.view.WindowCompat
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.codingblocks.clock.base.ui.scaffold.AppScaffold
 import com.codingblocks.clock.base.ui.theme.AppTheme
 import com.codingblocks.clock.core.NotificationActions
 import com.codingblocks.clock.navigation.AppNavHost
-import timber.log.Timber
 
 class MainActivity : ComponentActivity() {
 
@@ -78,7 +74,6 @@ class MainActivity : ComponentActivity() {
 
         if (intent?.action == NotificationActions.ACTION_OPEN_FEEDS) {
             // navigateToFeeds()
-            Timber.tag("wims").i("navigate to feed?")
         }
     }
 }
@@ -88,11 +83,7 @@ class MainActivity : ComponentActivity() {
 private fun MainView() {
     val scaffoldState = rememberScaffoldState()
     val navController = rememberNavController()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = navBackStackEntry?.destination
-    val currentDestinationRoute = currentDestination?.route
     val isBottomNavigationVisible = true
-    // BottomNav.entries.any { it.screen.route == currentDestinationRoute }
 
     AppTheme {
         AppScaffold(
@@ -107,7 +98,6 @@ private fun MainView() {
         ) { contentPadding ->
             Box(
                 modifier = Modifier
-                    //.consumedWindowInsets(contentPadding)
                     .padding(contentPadding)
                     .imePadding(),
             ) {

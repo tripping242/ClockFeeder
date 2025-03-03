@@ -3,10 +3,8 @@ package com.codingblocks.clock.ui.watchlists
 import android.graphics.Bitmap
 import android.util.LruCache
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -32,7 +29,6 @@ import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.TextField
-import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AddAlert
 import androidx.compose.material.icons.outlined.Check
@@ -40,21 +36,18 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.primarySurface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -83,15 +76,11 @@ import com.codingblocks.clock.core.local.data.PositionLPLocal
 import com.codingblocks.clock.core.local.data.PositionNFTLocal
 import com.codingblocks.clock.core.local.data.WatchListConfig
 import com.codingblocks.clock.core.local.data.WatchlistWithPositions
-import com.codingblocks.clock.core.local.data.formattedHHMM
-import com.codingblocks.clock.ui.feeds.FeedsViewModel
-import com.codingblocks.clock.ui.utils.loadBase64WithGlide
 import com.codingblocks.clock.ui.watchlists.WatchListViewModel.PositionItem
 import com.codingblocks.clock.ui.watchlists.WatchListViewModel.ShowType
 import com.skydoves.landscapist.ImageOptions
 import com.skydoves.landscapist.glide.GlideImage
 import org.koin.androidx.compose.getViewModel
-import timber.log.Timber
 import java.time.ZonedDateTime
 
 @Composable
@@ -102,9 +91,6 @@ fun WatchlistsScreen(
     val parentLazyListState: LazyListState = rememberLazyListState()
     val childLazyListState = rememberLazyListState()
     var expandedItemIndex by remember { mutableStateOf(-1) }
-    val coroutineScope = rememberCoroutineScope()
-
-    var showDeleteFeedDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(expandedItemIndex) {
         if (expandedItemIndex != -1) parentLazyListState.animateScrollToItem(expandedItemIndex) // Smooth scroll to the item
@@ -138,7 +124,6 @@ fun WatchlistsScreen(
                             if (expandedItemIndex != index) {
                                 expandedItemIndex = index
                             } else {
-                                // Toggle off if clicked again
                                 expandedItemIndex = -1
                             }
                         },
@@ -579,7 +564,6 @@ fun AddWatchListDialog(
                     color = md_theme_light_secondary,
                 )
             }
-            // todo we could map stakeaddress already in use error on resolving!
             resolveError?.let {
                 Text(
                     text = it,
@@ -821,7 +805,7 @@ fun PositionNFTItem(
         }
 
         Text(
-            text = item.name, modifier = Modifier.width(140.dp), // Adjust width as needed
+            text = item.name, modifier = Modifier.width(140.dp),
             maxLines = 1, overflow = TextOverflow.Ellipsis
         )
 
@@ -837,8 +821,6 @@ fun PositionNFTItem(
                 .width(60.dp)
                 .padding(end = 16.dp)
         )
-
-        // Text(text = item.lastUpdated.formattedHHMM())
 
         IconButton(
             onClick = {
@@ -941,8 +923,6 @@ fun PositionFTItem(
                 .padding(end = 16.dp)
         )
 
-        //Text(text = item.lastUpdated.formattedHHMM())
-
         IconButton(
             onClick = {
                 if (item.showInFeed.not()) {
@@ -1006,7 +986,6 @@ fun LogoImage(
             contentDescription = "Token Logo"
         )
     } else {
-        // Show a placeholder if the logo is not available
         Image(
             modifier = Modifier
                 .size(24.dp)

@@ -69,7 +69,6 @@ import com.codingblocks.clock.core.local.data.CustomNFTAlert
 import com.codingblocks.clock.core.local.data.FeedFTWithAlerts
 import com.codingblocks.clock.core.local.data.FeedNFTWithAlerts
 import com.codingblocks.clock.ui.feeds.FeedsViewModel.ShowType
-import com.codingblocks.clock.ui.watchlists.WatchListViewModel
 import kotlinx.collections.immutable.toImmutableList
 import org.koin.androidx.compose.getViewModel
 import timber.log.Timber
@@ -281,7 +280,6 @@ fun FeedNFTItem(
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
-    var showDeleteFeedDialog by remember { mutableStateOf(false) }
 
     val optionsAlertValue = remember {
         FeedsViewModel.AlertValue.entries.map { it.label }
